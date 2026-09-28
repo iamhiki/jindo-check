@@ -1,0 +1,1533 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2E8B4E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="진도 체크판">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>진도 체크판</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+html { -webkit-text-size-adjust: 100%; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+:root {
+  --bg: #EDF2EA;
+  --grid: #DCE6D8;
+  --card: #FFFFFF;
+  --soft: #E4ECE0;
+  --ink: #1E2A23;
+  --muted: #5B6B62;
+  --line: #D0DCCD;
+  --accent: #2E8B4E;
+  --accent-ink: #FFFFFF;
+  --hanko: #D2394A;
+  --sun: #D2394A;
+  --sat: #2F5DB8;
+  --shadow: 0 1px 2px rgba(30, 42, 35, .06), 0 6px 18px rgba(30, 42, 35, .07);
+  --display: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111713; --grid: #19211C; --card: #1B241F; --soft: #243029; --ink: #E3ECE5; --muted: #97A89E;
+    --line: #2C3932; --accent: #5BC27B; --accent-ink: #0D1A11; --hanko: #FF6B77; --sun: #FF7B85; --sat: #7EA6FF;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 22px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111713; --grid: #19211C; --card: #1B241F; --soft: #243029; --ink: #E3ECE5; --muted: #97A89E;
+  --line: #2C3932; --accent: #5BC27B; --accent-ink: #0D1A11; --hanko: #FF6B77; --sun: #FF7B85; --sat: #7EA6FF;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 22px rgba(0,0,0,.25);
+}
+
+* { box-sizing: border-box; }
+body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 26px 26px;
+  color: var(--ink);
+  font: 15px/1.55 var(--body);
+  padding-inline: 16px;
+  padding-block: env(safe-area-inset-top, 0px) calc(84px + env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+body.lock { overflow: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 2px; border-radius: 10px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+/* 헤더 */
+.top { display: flex; align-items: center; gap: 12px; padding-block: 18px 10px; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand .logo { width: 44px; flex: none; display: block; }
+.logo-btn { position: relative; flex: none; border: 0; background: none; padding: 0; border-radius: 50%; transition: transform .15s; }
+.logo-btn:hover { transform: rotate(-6deg) scale(1.06); }
+.logo-btn:active { transform: scale(.94); }
+.logo-btn .swap { position: absolute; right: -3px; bottom: -2px; width: 18px; height: 18px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); display: grid; place-items: center; color: var(--muted); }
+.logo-btn .swap svg { width: 11px; height: 11px; }
+.picker button.pick { display: grid; gap: 4px; justify-items: center; padding: 8px 4px; border-radius: 14px; border: 2px solid transparent; background: none; font-size: 13px; }
+.picker button.pick:hover { background: color-mix(in srgb, var(--c) 6%, transparent); }
+.picker button.pick[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 10%, var(--card)); font-weight: 600; }
+.brand h1 { font-size: 26px; line-height: 1.1; }
+.brand .sub { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.brand .sub .hx { height: 11px; }
+.sync { margin-left: auto; font-size: 12px; color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+.sync::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 6px; vertical-align: 1px; }
+.sync.local::before { background: #E0A030; }
+
+/* 공통 */
+.section { display: grid; gap: 12px; margin-block: 18px; }
+.section-head { display: flex; align-items: baseline; gap: 10px; }
+.section-head h2 { font-size: 21px; }
+.section-head .count { color: var(--muted); font-size: 13px; }
+.section-head .spacer { flex: 1; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: var(--shadow); }
+.muted { color: var(--muted); }
+.btn { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 9px 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--hanko); }
+.btn.danger.armed { background: var(--hanko); border-color: var(--hanko); color: #fff; }
+.btn.big { width: 100%; justify-content: center; padding: 14px; font-size: 16px; border-radius: 16px; }
+.btn.small { padding: 6px 10px; font-size: 13px; border-radius: 10px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--soft); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
+.tabnum { font-variant-numeric: tabular-nums; }
+
+/* 도장 */
+.stamp { --c: var(--accent); position: relative; display: inline-grid; place-items: center; aspect-ratio: 1; width: 100%; max-width: 100%;
+  border-radius: 50%; background: color-mix(in srgb, var(--c) 16%, var(--card)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); }
+.stamp img { width: 108%; height: 108%; max-width: none; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.stamp img.skin { width: calc(100% - 6px); height: calc(100% - 6px); border-radius: 50%; object-fit: cover; }
+.stamp.flat { box-shadow: none; }
+.stamp.blank { background: var(--soft); box-shadow: inset 0 0 0 2px var(--line); }
+.stamp.blank img { filter: grayscale(1) contrast(.9) brightness(1.08); opacity: .38; }
+.faces { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 7px; }
+.faces .stamp { width: 22px; box-shadow: none; }
+.faces .stamp.blank { background: none; }
+.faces .more { font-size: 11px; color: var(--muted); align-self: center; margin-left: 3px; }
+.daynav { display: flex; align-items: center; gap: 6px; }
+.daynav b { font-family: var(--display); font-weight: 400; font-size: 18px; flex: 1; text-align: center; }
+.daynav .x:disabled { opacity: .35; cursor: default; }
+.pop { animation: pop .5s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pop { from { transform: scale(1.9) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* 헌터 문자 */
+.hx { display: block; height: 1em; width: auto; overflow: visible; }
+.hx .f { fill: currentColor; stroke: none; }
+
+/* 한코(합격 도장) */
+.hanko { color: var(--hanko); border: 2.5px solid currentColor; border-radius: 10px; padding: 5px 7px; transform: rotate(-8deg); display: inline-flex; flex-direction: column; align-items: center; gap: 2px; background: color-mix(in srgb, var(--hanko) 7%, transparent); }
+.hanko .hx { height: 16px; }
+.hanko small { font-size: 9.5px; font-weight: 600; letter-spacing: .08em; line-height: 1; }
+
+/* 다음 레슨 */
+.nextlesson { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; }
+.dday { font-family: var(--display); font-size: 30px; line-height: 1; color: var(--accent-ink); background: var(--accent); border-radius: 16px; padding: 12px 14px; min-width: 76px; text-align: center; }
+.dday small { display: block; font-family: var(--body); font-size: 11px; opacity: .85; margin-top: 4px; }
+.nextlesson h3 { font-size: 19px; }
+.nextlesson .memo { font-size: 13.5px; color: var(--muted); }
+
+/* 숙제 카드 */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.hw { position: relative; display: grid; grid-template-columns: 62px 1fr auto; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line);
+  border-radius: 18px; padding: 12px; box-shadow: var(--shadow); cursor: pointer; text-align: left; }
+.hw:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
+.hw .title { font-weight: 600; font-size: 15.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.hw .meta { font-size: 12.5px; color: var(--muted); }
+.bar { height: 8px; border-radius: 99px; background: var(--soft); overflow: hidden; margin-top: 7px; }
+.bar > i { display: block; height: 100%; border-radius: inherit; background: var(--c); }
+.hw .num { font-family: var(--display); font-size: 20px; line-height: 1; text-align: right; color: var(--c); }
+.hw .num small { font-family: var(--body); font-size: 11.5px; color: var(--muted); display: block; margin-top: 3px; }
+.plus { border: 0; background: var(--c); color: #fff; border-radius: 12px; padding: 7px 10px; font-weight: 600; font-size: 13px; margin-top: 8px; white-space: nowrap; }
+.hw.done { opacity: .92; }
+.hw.done .hanko { position: absolute; right: 10px; top: 8px; transform: rotate(-10deg) scale(.8); }
+
+/* 빈 화면 */
+.empty { text-align: center; display: grid; gap: 12px; justify-items: center; padding-block: 28px; }
+.lineup { display: flex; justify-content: center; }
+.lineup .stamp { width: 62px; margin-inline: -5px; }
+.empty .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+/* 모달 */
+.overlay { position: fixed; inset: 0; background: rgba(12, 20, 15, .45); z-index: 40; display: flex; align-items: flex-end; justify-content: center; animation: fade .2s; }
+@keyframes fade { from { opacity: 0; } }
+.sheet { background: var(--bg); width: 100%; max-width: 680px; max-height: 94%; overflow: auto; border-radius: 22px 22px 0 0;
+  padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)); animation: up .25s cubic-bezier(.2, .9, .3, 1); overscroll-behavior: contain; }
+@keyframes up { from { transform: translateY(40px); opacity: .4; } }
+@media (min-width: 720px) { .overlay { align-items: center; } .sheet { border-radius: 22px; max-height: 88%; } }
+.sheet-bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding-block: 12px; background: var(--bg); }
+.sheet-bar h2 { font-size: 19px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.x { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); font-size: 18px; line-height: 1; }
+.sheet .panel + .panel { margin-top: 12px; }
+
+/* 곡 상세 */
+.hero { display: grid; grid-template-columns: 84px 1fr auto; gap: 14px; align-items: center; }
+.hero h3 { font-size: 22px; overflow-wrap: anywhere; }
+.hero .big { font-family: var(--display); font-size: 44px; line-height: 1; color: var(--c); text-align: center; }
+.hero .big small { display: block; font-family: var(--body); font-size: 12px; color: var(--muted); }
+.cheer { margin-top: 12px; background: var(--c); color: #fff; border-radius: 18px; padding: 14px; display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center; }
+.cheer .hanko { color: #fff; background: rgba(255,255,255,.12); }
+.cheer b { font-family: var(--display); font-weight: 400; font-size: 18px; display: block; }
+.sheet-card { position: relative; overflow: hidden; }
+.sheet-card .wm { position: absolute; inset: 0; display: grid; align-content: center; gap: 14px; color: var(--c); opacity: .09; transform: rotate(-9deg) scale(1.2); pointer-events: none; }
+.sheet-card .wm .hx { height: 30px; margin-inline: auto; }
+.slots { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 12px 10px; margin-top: 12px; }
+.slot { border: 0; background: none; padding: 0; display: grid; gap: 3px; justify-items: center; }
+.slot .stamp { transition: transform .15s; }
+.slot:active .stamp { transform: scale(.94); }
+.slot .hole { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px dashed var(--line); display: grid; place-items: center; font-family: var(--display); font-size: 20px; color: var(--muted); }
+.slot.next .hole { border-color: var(--c); color: var(--c); background: color-mix(in srgb, var(--c) 7%, transparent); }
+.slot .d { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.4em; }
+.logedit { display: grid; gap: 10px; margin-top: 12px; padding: 12px; border-radius: 14px; background: var(--soft); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.daylist { display: grid; }
+.daylist > div { display: flex; align-items: center; gap: 10px; padding-block: 9px; border-bottom: 1px solid var(--line); }
+.daylist > div:last-child { border-bottom: 0; }
+.daylist .mini { display: flex; }
+.daylist .mini .stamp { width: 24px; margin-left: -7px; }
+.daylist .grow { flex: 1; min-width: 0; }
+
+/* 폼 */
+.form { display: grid; gap: 14px; }
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.input { width: 100%; border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 11px 12px; }
+textarea.input { resize: vertical; min-height: 64px; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper .input { width: 80px; text-align: center; font-weight: 600; }
+.stepper button { width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font-size: 20px; }
+.picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (min-width: 520px) { .picker { grid-template-columns: repeat(6, 1fr); } }
+.picker label { display: grid; gap: 4px; justify-items: center; padding: 8px 4px; border-radius: 14px; border: 2px solid transparent; cursor: pointer; font-size: 13px; }
+.picker input { position: absolute; opacity: 0; pointer-events: none; }
+.picker label:has(input:checked) { border-color: var(--c); background: color-mix(in srgb, var(--c) 10%, var(--card)); font-weight: 600; }
+.picker label:has(input:focus-visible) { outline: 3px solid color-mix(in srgb, var(--accent) 60%, transparent); }
+.picker .stamp { width: 58px; }
+
+/* 달력 */
+.cal-layout { display: grid; gap: 14px; }
+@media (min-width: 860px) { .cal-layout { grid-template-columns: 1.25fr 1fr; align-items: start; } }
+.cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cal-head h2 { font-size: 22px; flex: 1; }
+.cal-head .x { font-size: 16px; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal .wd { text-align: center; font-size: 12px; color: var(--muted); padding-bottom: 4px; }
+.cal .wd:first-child { color: var(--sun); } .cal .wd:nth-child(7) { color: var(--sat); }
+.day { border: 0; background: none; border-radius: 12px; min-height: 54px; padding: 4px 0 6px; display: grid; justify-items: center; align-content: start; gap: 3px; }
+.day .n { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-variant-numeric: tabular-nums; font-size: 14px; }
+.day.sun .n { color: var(--sun); } .day.sat .n { color: var(--sat); }
+.day.today .n { box-shadow: inset 0 0 0 2px var(--accent); font-weight: 600; }
+.day.lesson .n { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.day.sel { background: var(--soft); }
+.day .dots { display: flex; gap: 2px; height: 6px; }
+.day .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c, var(--muted)); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.legend .lz { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); }
+.legend .dz { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.daypanel h3 { font-size: 19px; margin-bottom: 8px; }
+.lesson-box { border-radius: 14px; background: color-mix(in srgb, var(--accent) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); padding: 12px; display: grid; gap: 8px; }
+.lesson-box .time { font-family: var(--display); font-size: 20px; }
+.hwchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hwchip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 3px 10px 3px 3px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.hwchip .stamp { width: 24px; }
+
+/* 기록 */
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 640px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.stat b { display: block; font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.1; }
+.stat span { font-size: 12.5px; color: var(--muted); }
+.heat-wrap { overflow-x: auto; }
+.heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 14px); gap: 3px; width: max-content; }
+.heat i { width: 14px; height: 14px; border-radius: 4px; background: var(--soft); }
+.heat i.l1 { background: color-mix(in srgb, var(--accent) 35%, var(--soft)); }
+.heat i.l2 { background: color-mix(in srgb, var(--accent) 65%, var(--soft)); }
+.heat i.l3 { background: var(--accent); }
+.heat i.fut { background: transparent; }
+
+/* 설정 */
+.set-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.seg { display: inline-flex; background: var(--soft); border-radius: 12px; padding: 3px; }
+.seg button { border: 0; background: none; border-radius: 9px; padding: 7px 12px; font-weight: 600; font-size: 13.5px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.skin-card { display: grid; grid-template-columns: 48px 1fr; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 14px; padding: 8px; }
+.skin-card .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.filebtn { position: relative; overflow: hidden; }
+.filebtn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.kana { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.kana div { border: 1px solid var(--line); border-radius: 10px; padding: 6px 4px 8px; display: grid; justify-items: center; gap: 4px; background: var(--card); }
+.kana div span { font-size: 11px; color: var(--muted); }
+.kana .hx { height: 24px; }
+.translate-out { min-height: 48px; display: flex; align-items: center; padding: 10px; background: var(--soft); border-radius: 12px; overflow-x: auto; }
+.translate-out .hx { height: 30px; }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+
+/* 축하 */
+.celebrate { position: fixed; inset: 0; z-index: 60; background: #13241A; color: #fff; display: grid; place-items: center; overflow: hidden; animation: fade .25s; }
+.rain { position: absolute; inset: -10% -20%; display: grid; align-content: space-around; transform: rotate(-12deg); opacity: .16; color: #9FE0B2; pointer-events: none; }
+.rain .lane { display: flex; gap: 40px; width: max-content; animation: drift 38s linear infinite; }
+.rain .lane:nth-child(even) { animation-direction: reverse; animation-duration: 46s; }
+.rain .hx { height: 34px; }
+@keyframes drift { to { transform: translateX(-50%); } }
+.cel-card { position: relative; text-align: center; display: grid; justify-items: center; gap: 10px; padding: 24px 16px; max-width: 420px; }
+.cel-card .stamp { width: 150px; animation: pop .7s cubic-bezier(.2, 1.6, .4, 1); }
+.cel-card .hanko { color: #FF6B77; background: rgba(255, 107, 119, .1); transform: rotate(-8deg) scale(1.5); margin-block: 12px 8px; }
+.cel-card h2 { font-size: 34px; }
+.cel-card p { margin: 0; color: #CFE6D6; }
+.cel-card .jp { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #9FE0B2; }
+.cel-card .jp .hx { height: 14px; }
+.cel-card blockquote { margin: 4px 0 8px; font-family: var(--display); font-size: 19px; color: #fff; }
+.cel-card .btn { background: #fff; color: #13241A; border: 0; }
+
+/* 탭바 */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: center; padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); pointer-events: none; }
+.tabbar nav { pointer-events: auto; display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; max-width: 520px; background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 5px; }
+.tabbar button { border: 0; background: none; border-radius: 16px; padding: 6px 0 5px; display: grid; justify-items: center; gap: 1px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.tabbar button svg { width: 23px; height: 23px; }
+.tabbar button[aria-current="page"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+.toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 70; background: var(--ink); color: var(--bg);
+  border-radius: 14px; padding: 10px 16px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100% - 32px); animation: up .2s; }
+.loading { padding-block: 60px; text-align: center; color: var(--muted); }
+body.guest { padding-bottom: 32px; }
+.login { max-width: 420px; margin: 12px auto 0; display: grid; gap: 14px; justify-items: center; text-align: center; }
+.login .panel { width: 100%; text-align: left; }
+.login h2 { font-size: 28px; }
+.login p { margin: 0; color: var(--muted); max-width: 34ch; }
+.login .seg { width: 100%; }
+.login .seg button { flex: 1; }
+.autherr { color: var(--hanko); font-size: 13.5px; min-height: 1.2em; margin: 0; }
+.or { display: flex; align-items: center; gap: 10px; width: 100%; color: var(--muted); font-size: 13px; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.linkbtn { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 4px; }
+.welcome { position: fixed; inset: 0; z-index: 65; background: rgba(8, 14, 10, .62); display: grid; place-items: center; padding: 16px; animation: fade .25s; }
+.license { position: relative; width: 100%; max-width: 380px; border-radius: 22px; overflow: hidden; color: #F3EEDC;
+  background: radial-gradient(120% 90% at 0% 0%, #2B3E30 0%, #16211A 55%, #0F1712 100%);
+  border: 2px solid #C9A042; box-shadow: 0 0 0 5px #16211A, 0 0 0 6px #C9A04266, 0 24px 60px rgba(0,0,0,.5);
+  animation: flip .7s cubic-bezier(.2, 1.3, .4, 1); transform-origin: 50% 60%; }
+@keyframes flip { from { transform: perspective(900px) rotateY(-80deg) scale(.8); opacity: 0; } }
+.license::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .07;
+  background: repeating-linear-gradient(135deg, #F3EEDC 0 1px, transparent 1px 12px); }
+.lic-top { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px 10px; border-bottom: 1px solid #C9A04255; }
+.lic-top b { font-family: var(--display); font-weight: 400; font-size: 17px; letter-spacing: .14em; color: #E7C766; }
+.lic-top .hx { height: 14px; color: #E7C766; }
+.lic-body { position: relative; display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; padding: 16px 18px 6px; }
+.lic-photo { border-radius: 16px; padding: 6px; background: #F3EEDC; box-shadow: inset 0 0 0 2px #C9A042; }
+.lic-photo .stamp { width: 100%; }
+.lic-field { display: grid; gap: 1px; margin-bottom: 6px; }
+.lic-field small { font-size: 10.5px; letter-spacing: .12em; color: #BFB48E; }
+.lic-field b { font-family: var(--display); font-weight: 400; font-size: 22px; line-height: 1.15; overflow-wrap: anywhere; color: #fff; }
+.lic-field span { font-size: 14px; font-variant-numeric: tabular-nums; }
+.lic-hi { position: relative; margin: 8px 18px 0; font-family: var(--display); font-size: 21px; line-height: 1.35; color: #fff; text-wrap: balance; }
+.lic-quote { position: relative; margin: 8px 18px 0; font-size: 14px; color: #D9D1B3; }
+.lic-jp { position: relative; display: flex; align-items: center; gap: 8px; margin: 12px 18px 0; font-size: 12px; color: #BFB48E; }
+.lic-jp .hx { height: 16px; color: #E7C766; }
+.lic-go { position: relative; margin: 16px 18px 18px; width: calc(100% - 36px); justify-content: center; background: #E7C766; border: 0; color: #16211A; font-size: 16px; padding: 13px; border-radius: 14px; font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <button class="logo-btn" data-act="logo-pick" aria-label="대표 캐릭터 바꾸기" title="대표 캐릭터 바꾸기"><img class="logo" id="logo" alt=""><span class="swap" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h7.5L7.5 2.5M10 7.5H2.5l2 2"/></svg></span></button>
+      <div>
+        <h1>베이스 진도표</h1>
+        <div class="sub" id="brand-sub">진도 체크판</div>
+      </div>
+    </div>
+    <span class="sync" id="sync" hidden></span>
+  </header>
+  <main id="view"><div class="loading">진도표 펼치는 중…</div></main>
+  <noscript><p class="loading">이 사이트는 자바스크립트가 필요해요.</p></noscript>
+</div>
+<div id="modal"></div>
+<div id="celebrate"></div>
+<div id="welcome"></div>
+<div id="toast"></div>
+
+<div class="tabbar">
+  <nav aria-label="화면">
+    <button data-act="tab" data-tab="homework">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.5h6v2.5H9zM8.5 11.5l2 2 4-4M8.5 17h7"/></svg>숙제</button>
+    <button data-act="tab" data-tab="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="15.5" cy="15" r="1.6" fill="currentColor" stroke="none"/></svg>달력</button>
+    <button data-act="tab" data-tab="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M9.3 20V5M14.6 20v-7M20 20V8"/></svg>기록</button>
+    <button data-act="tab" data-tab="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/><circle cx="12" cy="12" r="7"/></svg>설정</button>
+  </nav>
+</div>
+
+<script src="firebase-config.js"></script>
+<script>
+(() => {
+"use strict";
+
+/* ───────── 캐릭터 ───────── */
+const CHARS = [
+  { id: "gon", name: "곤", color: "#3FA34D", cheer: "해냈다! 다음 곡도 가보자!" },
+  { id: "killua", name: "키르아", color: "#7C83D6", cheer: "뭐, 이 정도는 식은 죽 먹기지." },
+  { id: "kurapika", name: "크라피카", color: "#2F5DB8", cheer: "꾸준함이 결국 실력이 된다." },
+  { id: "leorio", name: "레오리오", color: "#4A5C80", cheer: "좋았어! 오늘도 한 걸음 전진!" },
+  { id: "hisoka", name: "히소카", color: "#D94452", cheer: "후후♠ 제법 잘 익었는걸♣" },
+  { id: "chrollo", name: "클로로", color: "#5A4A86", cheer: "훌륭하군. 다음 페이지로 넘어가지." },
+];
+const CH = Object.fromEntries(CHARS.map(c => [c.id, c]));
+
+function hexRGB(h) { h = h.replace("#", ""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); }
+function mix(a, b, t) { const A = hexRGB(a), B = hexRGB(b); return "rgb(" + A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",") + ")"; }
+
+/* 100×100 좌표계 얼굴 그리기. sil=true면 흰 스티커 테두리 실루엣만 */
+class Painter {
+  constructor(c, dot, sil) { this.c = c; this.dot = dot; this.sil = sil; }
+  P() { return new Path2D(); }
+  poly(pts) { const p = this.P(); p.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) p.lineTo(pts[i][0], pts[i][1]); p.closePath(); return p; }
+  curvy(pts, b) {
+    const p = this.P(); p.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i <= pts.length; i++) {
+      const a = pts[i - 1], q = pts[i % pts.length], mx = (a[0] + q[0]) / 2, my = (a[1] + q[1]) / 2;
+      p.quadraticCurveTo(mx + (mx - 50) * b, my + (my - 55) * b, q[0], q[1]);
+    }
+    p.closePath(); return p;
+  }
+  circ(x, y, r) { const p = this.P(); p.arc(x, y, r, 0, Math.PI * 2); return p; }
+  ell(x, y, rx, ry) { const p = this.P(); p.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); return p; }
+  grad(stops, y0 = 0, y1 = 70, x = 50) { const g = this.c.createLinearGradient(x, y0, x, y1); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); return g; }
+  shape(path, fill, line, w = 1.5) {
+    const c = this.c; c.lineJoin = "round"; c.lineCap = "round";
+    if (this.sil) { c.strokeStyle = "#fff"; c.lineWidth = 9; c.stroke(path); c.fillStyle = "#fff"; c.fill(path); return; }
+    c.fillStyle = fill; c.fill(path); c.strokeStyle = line; c.lineWidth = w; c.stroke(path);
+  }
+  fillIf(path, color) { if (this.sil) return; this.c.fillStyle = color; this.c.fill(path); }
+  strokeIf(path, color, w) { if (this.sil) return; const c = this.c; c.lineCap = "round"; c.lineJoin = "round"; c.strokeStyle = color; c.lineWidth = w; c.stroke(path); }
+  strands(lines, color) {
+    if (this.sil) return;
+    const p = this.P();
+    for (const [a, b] of lines) { p.moveTo(a[0], a[1]); p.quadraticCurveTo((a[0] + b[0]) / 2 + 2, (a[1] + b[1]) / 2, b[0], b[1]); }
+    this.c.globalAlpha = .8; this.strokeIf(p, color, 1); this.c.globalAlpha = 1;
+  }
+
+  draw(id) { this[id](); }
+
+  face(skin = "#FFE6D3", ears = true) {
+    const line = "#D9A084";
+    if (ears) { this.shape(this.circ(22, 67, 5.5), skin, line, 1.2); this.shape(this.circ(78, 67, 5.5), skin, line, 1.2); }
+    const f = this.P();
+    f.moveTo(22, 58); f.bezierCurveTo(22, 80, 37, 92, 50, 92); f.bezierCurveTo(63, 92, 78, 80, 78, 58); f.bezierCurveTo(78, 28, 22, 28, 22, 58); f.closePath();
+    this.shape(f, skin, line, 1.2);
+    this.fillIf(this.ell(31, 78.5, 5, 2.5), "rgba(255,143,163,.35)");
+    this.fillIf(this.ell(69, 78.5, 5, 2.5), "rgba(255,143,163,.35)");
+  }
+  bobBack(bottom = 90) { const p = this.P(); p.moveTo(15, bottom); p.lineTo(14, 50); p.bezierCurveTo(14, 14, 86, 14, 86, 50); p.lineTo(85, bottom); p.closePath(); return p; }
+  bobFront(edge, bottom = 90) {
+    const p = this.P(); p.moveTo(15, bottom); p.lineTo(15, 52);
+    p.bezierCurveTo(15, 30, 30, 18, 50, 18); p.bezierCurveTo(70, 18, 85, 30, 85, 52); p.lineTo(85, bottom);
+    for (const [x, y] of edge) p.lineTo(x, y);
+    p.closePath(); return p;
+  }
+  eyes(iris, s = 1, lid = null) {
+    const sly = lid != null;
+    if (this.sil) return;
+    const c = this.c, y = 69;
+    for (const x of [38.5, 61.5]) {
+      if (this.dot) { this.fillIf(this.ell(x, y, 3.3, 3.8), "#231F20"); this.fillIf(this.circ(x + 1.1, y - 1.6, 1.1), "#fff"); continue; }
+      const w = 11.5 * s, h = 13.5 * s, top = y - h / 2;
+      c.save();
+      c.clip(this.ell(x, y, w / 2, h / 2));
+      if (sly) { const r = this.P(); r.rect(x - w, y - lid, w * 2, h); c.clip(r); }
+      c.fillStyle = "#fff"; c.fillRect(x - w / 2, top, w, h);
+      const it = top + .6, ih = h - .6;
+      c.fillStyle = this.grad([mix(iris, "#000000", .45), iris, mix(iris, "#FFFFFF", .35)], it, it + ih, x);
+      c.fill(this.ell(x, it + ih / 2, 4.7 * s, ih / 2));
+      c.fillStyle = "rgba(0,0,0,.75)"; c.fill(this.ell(x, y + .1 * s, 2.3 * s, 3.3 * s));
+      c.fillStyle = "#fff"; c.fill(this.circ(x - 1.9 * s, y - 2.8 * s, 2.4 * s));
+      c.fillStyle = "rgba(255,255,255,.9)"; c.fill(this.circ(x + 2.2 * s, y + 3 * s, 1.1 * s));
+      c.restore();
+      const lt = sly ? y - lid - .3 : top + 2.2, o = x < 50 ? -1 : 1, lash = this.P();
+      lash.moveTo(x - o * (w / 2 - .5), lt + (sly ? .8 : 1.4));
+      lash.quadraticCurveTo(x, sly ? lt - 1 : top - 2.6, x + o * (w / 2 + 1.3), lt + (sly ? -.6 : .6));
+      this.strokeIf(lash, "#2A1E1A", 2.3);
+    }
+  }
+  brows(y, color, tilt, w) {
+    for (const x of [38.5, 61.5]) {
+      const i = x < 50 ? 1 : -1, b = this.P();
+      b.moveTo(x - i * 5, y); b.quadraticCurveTo(x, y - 2, x + i * 5, y + tilt);
+      this.strokeIf(b, color, w);
+    }
+  }
+  openSmile() {
+    if (this.sil) return;
+    const c = this.c, m = this.P();
+    m.moveTo(45.5, 81); m.quadraticCurveTo(50, 82, 54.5, 81); m.quadraticCurveTo(50, 89, 45.5, 81); m.closePath();
+    c.fillStyle = "#9E3B3B"; c.fill(m);
+    c.save(); c.clip(m); c.fillStyle = "#F08A8A"; c.fill(this.ell(50, 85.5, 3.5, 2)); c.restore();
+    this.strokeIf(m, "#6B2A2A", .9);
+  }
+  smallSmile() { const m = this.P(); m.moveTo(47, 82); m.quadraticCurveTo(50, 84.5, 53, 82); this.strokeIf(m, "#A0584E", 1.2); }
+  catMouth() { const m = this.P(); m.moveTo(45.5, 81.5); m.quadraticCurveTo(47.75, 84.5, 50, 81.5); m.quadraticCurveTo(52.25, 84.5, 54.5, 81.5); this.strokeIf(m, "#A0584E", 1.2); }
+  smirk() { const m = this.P(); m.moveTo(45, 82); m.quadraticCurveTo(51, 85, 55.5, 80); this.strokeIf(m, "#A0584E", 1.3); }
+  glasses() {
+    const gold = "#C9A042";
+    for (const x of [38.5, 61.5]) { this.fillIf(this.circ(x, 69.5, 7.4), "rgba(255,255,255,.14)"); this.strokeIf(this.circ(x, 69.5, 7.4), gold, 1.4); }
+    const a = this.P();
+    a.moveTo(45.9, 68.5); a.quadraticCurveTo(50, 66.5, 54.1, 68.5);
+    a.moveTo(31.1, 68.5); a.lineTo(22, 66); a.moveTo(68.9, 68.5); a.lineTo(78, 66);
+    this.strokeIf(a, gold, 1.3);
+  }
+  star(cx, cy, r) { const p = this.P(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * .45 : r, a = i * Math.PI / 5 - Math.PI / 2; const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; i ? p.lineTo(x, y) : p.moveTo(x, y); } p.closePath(); return p; }
+  tear(cx, cy) { const p = this.P(); p.moveTo(cx, cy - 5); p.quadraticCurveTo(cx + 5.5, cy + 2, cx, cy + 3.5); p.quadraticCurveTo(cx - 5.5, cy + 2, cx, cy - 5); p.closePath(); return p; }
+
+  gon() {
+    this.face();
+    const h = this.poly([[21,66],[17,52],[5,46],[16,40],[4,26],[20,29],[12,11],[30,20],[32,1],[44,17],[52,-2],[58,17],[70,2],[70,21],[88,12],[80,30],[96,28],[84,42],[94,50],[80,52],[79,66],
+      [76,56],[71,50],[67,58],[61,49],[55,57],[50,47],[45,57],[39,49],[33,58],[29,50],[24,56]]);
+    this.shape(h, this.grad(["#2F7A3E", "#1A2A1C", "#0E120F"], -2, 56), "#2A6A36", 1.9);
+    this.strands([[[50,34],[52,6]], [[42,34],[33,10]], [[58,34],[68,9]], [[34,40],[14,22]], [[66,40],[86,20]]], "#3F8A4C");
+    this.eyes("#9A6230");
+    this.openSmile();
+  }
+  killua() {
+    this.face();
+    const h = this.curvy([[20,68],[12,58],[15,52],[4,46],[14,40],[3,30],[16,28],[10,14],[26,20],[26,5],[38,14],[46,1],[54,12],[64,3],[68,16],[82,9],[80,24],[95,24],[86,36],[97,44],[85,50],[90,58],[80,68],
+      [78,60],[73,52],[69,61],[63,51],[58,59],[52,49],[47,59],[41,51],[36,60],[31,52],[26,59],[22,54]], .07);
+    this.shape(h, this.grad(["#FFFFFF", "#ECE9F7", "#CFC9EA"], 0, 66), "#8A84B8", 1.6);
+    this.strands([[[50,36],[48,12]], [[38,38],[24,22]], [[62,38],[76,20]], [[44,40],[36,10]], [[56,40],[62,8]], [[30,46],[10,34]], [[70,46],[90,36]], [[46,50],[44,58]], [[58,50],[60,58]]], "#ABA5D2");
+    this.eyes("#3F86D6");
+    this.catMouth();
+  }
+  /* 설정화 모습: 뾰족한 결이 겹친 둥근 단발, 눈까지 오는 앞머리, 턱 쪽으로 모이는 옆머리, 왼쪽 귀 빨간 귀걸이 */
+  kurapika() {
+    const line = "#B8801A";
+    this.shape(this.curvy([[18,86],[12,74],[10,58],[14,40],[26,22],[50,15],[74,22],[86,40],[90,58],[88,74],[82,86],[70,80],[30,80]], .03), "#E0A52A", line, 1.4);
+    this.face("#FFE6D3", false);
+    const h = this.P();
+    h.moveTo(21, 89);
+    h.lineTo(14, 78); h.lineTo(15, 71); h.lineTo(10, 61);
+    h.bezierCurveTo(11, 34, 28, 16, 50, 16);
+    h.bezierCurveTo(72, 16, 89, 34, 90, 61);
+    h.lineTo(85, 71); h.lineTo(86, 78); h.lineTo(79, 89);
+    for (const [x, y] of [[77,79],[76,68],[75,60],[72,50],[68,65],[64,49],[60,57],[56,47],[51,64],[47,48],[43,57],[39,49],[33,65],[30,52],[26,62],[24,68],[23,79]]) h.lineTo(x, y);
+    h.closePath();
+    this.shape(h, this.grad(["#FFEB7A", "#F2B42A"], 10, 80), line, 1.5);
+    this.strands([[[50,20],[48,46]], [[40,21],[33,47]], [[60,21],[67,47]], [[30,28],[19,56]], [[70,28],[81,56]], [[20,60],[18,80]], [[80,60],[82,80]]], "#D39A22");
+    const shine = this.P(); shine.arc(50, 50, 30, -150 * Math.PI / 180, -115 * Math.PI / 180);
+    this.strokeIf(shine, "rgba(255,255,255,.75)", 2.4);
+    // 왼쪽 귀(보는 사람 기준 오른쪽) 빨간 물방울 귀걸이
+    this.shape(this.circ(78, 86, 1.2), "#E3B23C", "#A07A1A", .6);
+    const drop = this.P(); drop.moveTo(78, 87.2); drop.quadraticCurveTo(81, 91, 78, 93); drop.quadraticCurveTo(75, 91, 78, 87.2); drop.closePath();
+    this.shape(drop, "#D6333F", "#8E1F28", .8);
+    this.eyes("#6A5E58");
+    this.smallSmile();
+  }
+  leorio() {
+    this.face();
+    const h = this.poly([[21,62],[18,48],[12,40],[20,34],[14,22],[26,24],[24,10],[36,18],[40,4],[50,16],[58,4],[62,18],[74,10],[74,24],[86,22],[80,34],[88,40],[80,48],[79,62],
+      [76,52],[70,46],[64,50],[58,44],[52,49],[46,44],[40,50],[34,45],[28,50],[24,52]]);
+    this.shape(h, this.grad(["#363A43", "#111216"]), "#000", 1.7);
+    this.strands([[[50,30],[50,18]], [[38,32],[30,20]], [[62,32],[70,20]]], "#4A4F5A");
+    this.brows(58, "#1A1A1E", 2.2, 2.2);
+    this.eyes("#6B4428", .92);
+    this.glasses();
+    this.openSmile();
+  }
+  hisoka() {
+    this.shape(this.curvy([[58,30],[80,6],[80,20],[99,16],[90,30],[100,40],[87,45],[95,57],[80,60],[76,40]], .05), "#2F3C72", "#19214A", 1.5);
+    this.face("#FFF1EA");
+    const h = this.curvy([[21,62],[19,46],[12,38],[21,34],[18,18],[29,23],[32,4],[40,17],[50,0],[54,13],[68,0],[66,15],[86,6],[77,22],[97,20],[84,32],[91,41],[80,46],[79,62],
+      [76,48],[66,40],[56,38],[46,39],[36,42],[28,48],[23,56]], .05);
+    this.shape(h, this.grad(["#F0525A", "#C82838", "#9E1E2E"], 0, 62), "#6E1420", 1.7);
+    this.strands([[[46,36],[48,8]], [[56,36],[64,6]], [[36,40],[32,12]], [[66,40],[82,14]], [[28,44],[20,24]]], "#FF8A8A");
+    this.brows(57, "#B0283A", -1.5, 1.4);
+    this.eyes("#E3B22E", 1, 1.5);
+    this.fillIf(this.star(32, 79, 4.2), "#E8475F");
+    this.fillIf(this.tear(68, 78.5), "#3DBF9A");
+    this.smirk();
+  }
+  /* 넨도로이드 모습: 둥근 머리 윤곽, 아래로 떨어지는 머리끝, 가운데 갈라진 앞머리, 이마 십자, 청록 귀걸이 */
+  chrollo() {
+    this.face("#FFE6D3", false);
+    const cross = this.P();
+    cross.moveTo(50, 42.5); cross.lineTo(50, 55.5); cross.moveTo(44.5, 49); cross.lineTo(55.5, 49);
+    cross.moveTo(48.6, 42.5); cross.lineTo(51.4, 42.5); cross.moveTo(48.6, 55.5); cross.lineTo(51.4, 55.5);
+    cross.moveTo(44.5, 47.6); cross.lineTo(44.5, 50.4); cross.moveTo(55.5, 47.6); cross.lineTo(55.5, 50.4);
+    this.strokeIf(cross, "#4A3560", 1.3);
+    const gem = this.P(); gem.moveTo(50, 46.6); gem.lineTo(52.4, 49); gem.lineTo(50, 51.4); gem.lineTo(47.6, 49); gem.closePath();
+    this.fillIf(gem, "#4A3560");
+    const h = this.P();
+    h.moveTo(19, 78);
+    h.lineTo(12, 71); h.lineTo(14, 65); h.lineTo(8, 57); h.lineTo(12, 51); h.lineTo(8, 42); h.lineTo(15, 37);
+    h.bezierCurveTo(13, 20, 30, 10, 50, 10);
+    h.bezierCurveTo(70, 10, 87, 20, 85, 37);
+    h.lineTo(92, 42); h.lineTo(88, 51); h.lineTo(92, 57); h.lineTo(86, 65); h.lineTo(88, 71); h.lineTo(81, 78);
+    for (const [x, y] of [[77,66],[75,54],[72,66],[68,51],[64,59],[60,46],[55,43],[50,40],[45,43],[40,46],[36,59],[32,51],[28,66],[25,54],[23,66]]) h.lineTo(x, y);
+    h.closePath();
+    this.shape(h, this.grad(["#2D303B", "#0F1015"]), "#000", 1.6);
+    this.strands([[[48,16],[44,38]], [[38,18],[29,44]], [[62,18],[71,44]], [[24,40],[20,62]], [[76,40],[80,62]]], "#4A4E5C");
+    for (const x of [20, 80]) this.shape(this.circ(x, 82, 2.7), "#2FB5A8", "#1C7A70", 1);
+    this.eyes("#6B4A34", 1, 3.6);
+    this.smallSmile();
+  }
+}
+
+const faceCache = new Map();
+function faceURL(id) {
+  const dot = S.settings.faceStyle === "figure", key = id + (dot ? ":f" : ":s");
+  if (faceCache.has(key)) return faceCache.get(key);
+  const N = 240, k = N / 100;
+  const place = c => { c.setTransform(k, 0, 0, k, 0, 0); c.translate(7, 8); c.scale(.86, .86); };
+  const off = document.createElement("canvas"); off.width = off.height = N;
+  const o = off.getContext("2d"); place(o); new Painter(o, dot, true).draw(id);
+  const cv = document.createElement("canvas"); cv.width = cv.height = N;
+  const c = cv.getContext("2d");
+  c.save(); c.shadowColor = "rgba(0,0,0,.22)"; c.shadowBlur = 1.8 * k * 1.6; c.shadowOffsetY = 1.4 * k; c.drawImage(off, 0, 0); c.restore();
+  place(c); new Painter(c, dot, false).draw(id);
+  const url = cv.toDataURL("image/png");
+  faceCache.set(key, url);
+  return url;
+}
+
+/* ───────── 헌터 문자 (10×10 칸, 선 굵기 1) ───────── */
+const HG = (() => {
+  const L = (...a) => { let d = "M" + a[0] + " " + a[1]; for (let i = 2; i < a.length; i += 2) d += "L" + a[i] + " " + a[i + 1]; return `<path d="${d}"/>`; };
+  const P = d => `<path d="${d}"/>`;
+  const O = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}"/>`;
+  const D = (x, y, r) => `<circle class="f" cx="${x}" cy="${y}" r="${r}"/>`;
+  const E = (x, y, rx, ry) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/>`;
+  return {
+    "あ": L(1.5,1.5,5,9,8.5,1.5) + L(2.7,4,7.3,4),
+    "い": D(5,5,1.4),
+    "う": P("M2 9L2 4.5C2 .5 8 .5 8 4.5L8 9"),
+    "え": P("M5 1.5L9 8.5L1 8.5Z"),
+    "お": O(5,5,3.8),
+    "か": L(2,2,4.6,8.4) + L(8.4,2.4,3.6,6) + L(1.2,8.4,8.8,8.4),
+    "き": L(3,1,3,9) + D(4.7,5,1.6),
+    "く": P("M2 1L2 7.6Q2 8.8 3.2 8.6") + L(2.4,6.3,8,1.5) + L(4.6,4.4,8.5,8.5),
+    "け": L(1.5,1,1.5,9) + P("M8.5 1.5L3 5L8.5 8.5Z"),
+    "こ": L(1.5,5.5,1.5,1.2,8,1.2,8,5.6) + O(6.3,7.3,1.8),
+    "さ": P("M2 1.5L2 6.8C2 9 5.3 9 5.3 6.8L5.3 3.2C5.3 1 8.6 1 8.6 3.2L8.6 8.8"),
+    "し": L(1.5,1.8,8.5,1.8) + L(1.5,3.8,8.5,3.8) + D(5,7,1.6),
+    "す": P("M1.5 2L4 2C6.5 2 6.5 8.5 4 8.5L1.5 8.5") + L(5.6,3.8,9,8.5),
+    "せ": L(5,.8,1.5,5.4,9,5.4,6,9.3) + L(5,.8,6,9.3),
+    "そ": O(5,2.9,1.9) + O(5,7,2.1),
+    "た": L(5,1.2,5,8.6) + L(1.5,8.6,8.5,8.6),
+    "ち": L(1.5,3.3,8.5,3.3) + L(5,.8,5,6.3) + D(5,7.5,1.6),
+    "つ": P("M1.5 1L1.5 5.5C1.5 10 8.5 10 8.5 5.5L8.5 1") + L(4,1,4,5.8) + L(6,1,6,5.8),
+    "て": L(1,1.5,9,1.5) + P("M1 3.6L9 3.6L5 9Z"),
+    "と": E(5,5.3,2.4,2.9) + L(5,1,5,9.5),
+    "な": L(1.5,1.5,8.5,1.5,1.5,8.5,8.5,8.5),
+    "に": L(2.3,1.5,7.7,1.5) + D(5,4.9,1.6) + L(1,8.5,9,8.5),
+    "ぬ": P("M2 9L2 4.5C2 .5 8 .5 8 4.5L8 9") + L(2.6,3,8,9),
+    "ね": P("M1.5 1.5L8.5 8.5L8.5 1.5L1.5 8.5Z"),
+    "の": O(3.5,3.2,2) + P("M8.5 1.3Q7.8 7.6 2.5 8.8"),
+    "は": L(1.5,1.5,8.5,1.5) + L(5,1.5,5,8.5) + L(1.5,8.5,8.5,8.5),
+    "ひ": L(1.5,1,1.5,8.5,9,8.5) + D(6,3,1.6),
+    "ふ": P("M1.5 1.5L5 1.5C9.5 1.5 9.5 8.5 5 8.5L1.5 8.5"),
+    "へ": L(1.5,1.5,8.5,1.5) + P("M5 3.8L9 8.6L1 8.6Z"),
+    "ほ": O(5,5,3.8) + L(1.2,5,8.8,5) + L(5,1.2,5,8.8),
+    "ま": L(1.5,1.5,8.5,1.5) + L(8.5,1.5,1.8,5,8.5,8.5) + L(1.5,8.5,8.5,8.5),
+    "み": D(5,1.8,1.3) + L(2,4.8,2,9) + L(5,4.3,5,8.7) + L(8,4.8,8,9),
+    "む": L(4.2,1,1.5,7.8,4.4,7.8) + P("M4.4 4.8L4.4 7C4.4 8.9 6.4 8.9 6.4 7C6.4 8.9 8.4 8.9 8.4 7L8.4 4.8"),
+    "め": L(1.5,1.2,8.5,8.5) + L(1.5,8.8,8.5,1.5,8.5,8.5),
+    "も": L(1.5,2.5,8.5,2.5) + L(1.5,4.5,8.5,4.5) + L(5,.6,5,6.6) + D(5,7.8,1.6),
+    "や": L(1.5,1.5,4.6,5,1.5,8.5) + L(4.6,5,9,5),
+    "ゆ": L(2,1.2,5,1.2,5,3.3) + P("M2 9L2 5.8C2 1.6 8.3 1.6 8.3 5.8L8.3 9"),
+    "よ": O(5,3,2.2) + L(5,5.2,5,9.3),
+    "ら": L(8,1.2,8,8.5,1,8.5),
+    "り": D(5,3,2.2) + L(2,9,3.8,6.4) + L(8,9,6.2,6.4),
+    "る": P("M3.2 1L3.2 7.4Q3.2 9 1.4 9") + P("M5.6 1L5.6 7C5.6 9.4 8.6 9.4 8.6 7L8.6 1"),
+    "れ": P("M1 2L8.5 2L4.6 5.8Z") + L(4.6,5.8,4.6,9.4,8.4,6),
+    "ろ": O(5,3,2) + L(3.6,4.5,1.5,8.5) + L(6.4,4.5,8.5,8.5),
+    "わ": L(1.2,9,3.8,1,5.4,9) + L(4.4,9,6.2,1,8.8,9),
+    "を": L(7.5,1,1.5,8.5,8.5,8.5) + L(4.2,5.4,8.5,5.4),
+    "ん": D(3,3,1.8) + L(8.5,1.5,3,9.5),
+    "ー": L(1,2,3,5,1,8) + L(9,2,7,5,9,8) + L(3,5,7,5),
+    "゛": D(5,8.3,1.2),
+    "゜": O(5,8.3,1.1),
+  };
+})();
+const SMALL = "ぁぃぅぇぉっゃゅょゎ";
+function hunterSVG(text, cls = "") {
+  let x = 0, out = "";
+  for (let ch of text.normalize("NFD")) {
+    const code = ch.charCodeAt(0);
+    if (code >= 0x30A1 && code <= 0x30F6) ch = String.fromCharCode(code - 0x60);
+    if (ch === "゙") ch = "゛";
+    if (ch === "゚") ch = "゜";
+    if (ch === " " || ch === "　") { x += 6; continue; }
+    if (SMALL.includes(ch)) {
+      const big = String.fromCharCode(ch.charCodeAt(0) + 1);
+      if (HG[big]) { out += `<g transform="translate(${x + 1.5} 3) scale(.7)">${HG[big]}</g>`; x += 11; }
+      continue;
+    }
+    if (ch === "゛" || ch === "゜") { out += `<g transform="translate(${x - 3} 0)">${HG[ch]}</g>`; x += 5; continue; }
+    if (!HG[ch]) continue;
+    out += `<g transform="translate(${x} 0)">${HG[ch]}</g>`; x += 12;
+  }
+  const w = Math.max(x - 2, 1);
+  return `<svg class="hx ${cls}" viewBox="-0.8 -0.8 ${w + 1.6} 11.6" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${out}</svg>`;
+}
+const JP_DONE = "しゅくだい かんりょう", JP_PASS = "ごうかく";
+
+/* ───────── 상태 & 저장소 ───────── */
+const DEFAULT_SETTINGS = { faceStyle: "sticker", defaultTarget: 10, lastChar: "chrollo", lessonTime: "19:00", logoChar: "gon" };
+const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const S = {
+  songs: [], lessons: [], settings: { ...DEFAULT_SETTINGS }, skins: {},
+  loaded: { songs: false, lessons: false }, backend: null,
+  user: undefined, // undefined = 확인 중, null = 로그아웃
+  authMode: "login", authError: "", authEmail: "", authNick: "", authBusy: false, welcome: false, settingsLoaded: false,
+  tab: "homework", modal: null, celebrate: null, justStamped: null,
+  calMonth: (() => { const d = today0(); d.setDate(1); return d; })(), calSel: null,
+};
+const FB_VER = "10.14.1";
+let FB = null, unsubs = [];
+const LOCAL_KEY = "bass-sheet-v1";
+const writeQueue = {};
+const needsLogin = () => S.backend === "cloud" && !S.user;
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function saveLocal() { try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ songs: S.songs, lessons: S.lessons, settings: S.settings, skins: S.skins })); } catch (e) {} }
+function loadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
+    S.songs = d.songs || []; S.lessons = d.lessons || []; S.settings = { ...DEFAULT_SETTINGS, ...(d.settings || {}) }; S.skins = d.skins || {};
+  } catch (e) {}
+}
+/* 모든 기록은 users/<로그인한 사람>/… 아래에만 저장된다 (firestore.rules 참고) */
+const userDoc = path => FB.api.doc(FB.fs, "users", S.user.uid, ...path.split("/"));
+function saveError(err) {
+  const code = err && err.code;
+  if (code === "resource-exhausted") toast("오늘 무료 저장 한도를 넘었어요. 내일 다시 시도해 주세요.");
+  else if (code === "permission-denied") toast("저장 권한이 없어요. 다시 로그인해 주세요.");
+  else toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요.");
+}
+function put(path, body) {
+  if (!FB || !S.user) { saveLocal(); return; }
+  const run = () => FB.api.setDoc(userDoc(path), body).catch(saveError);
+  writeQueue[path] = (writeQueue[path] || Promise.resolve()).then(run, run);
+}
+function del(path) {
+  if (!FB || !S.user) { saveLocal(); return; }
+  const run = () => FB.api.deleteDoc(userDoc(path)).catch(saveError);
+  writeQueue[path] = (writeQueue[path] || Promise.resolve()).then(run, run);
+}
+const strip = o => { const { id, ...rest } = o; return rest; };
+function saveSong(s) { const i = S.songs.findIndex(x => x.id === s.id); if (i < 0) S.songs.push(s); else S.songs[i] = s; put("songs/" + s.id, strip(s)); }
+function removeSong(id) { S.songs = S.songs.filter(s => s.id !== id); del("songs/" + id); }
+function saveLesson(l) { const i = S.lessons.findIndex(x => x.id === l.id); if (i < 0) S.lessons.push(l); else S.lessons[i] = l; put("lessons/" + l.id, strip(l)); }
+function removeLesson(id) { S.lessons = S.lessons.filter(l => l.id !== id); del("lessons/" + id); }
+function saveSettings(patch) { S.settings = { ...S.settings, ...patch }; put("settings/main", S.settings); }
+function saveSkin(ch, data) {
+  if (data) { S.skins[ch] = data; put("skins/" + ch, { data }); }
+  else { delete S.skins[ch]; del("skins/" + ch); }
+}
+
+async function boot() {
+  render();
+  const cfg = window.FIREBASE_CONFIG;
+  if (!cfg || !cfg.apiKey || String(cfg.apiKey).startsWith("여기에")) { startLocal(); return; }
+  try {
+    const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+    const [appM, authM, fsM] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]);
+    const app = appM.initializeApp(cfg);
+    let fs;
+    try { fs = fsM.initializeFirestore(app, { localCache: fsM.persistentLocalCache({ tabManager: fsM.persistentMultipleTabManager() }) }); }
+    catch (e) { fs = fsM.getFirestore(app); }
+    const auth = authM.getAuth(app);
+    auth.languageCode = "ko";
+    FB = { fs, auth, api: { ...fsM, ...authM } };
+    S.backend = "cloud";
+    authM.onAuthStateChanged(auth, user => { S.user = user; S.authBusy = false; subscribe(); render(); });
+  } catch (e) {
+    startLocal();
+    toast("서버에 연결하지 못해서 이 기기에만 저장해요.");
+  }
+}
+function startLocal() { S.backend = "local"; S.user = null; loadLocal(); S.loaded = { songs: true, lessons: true }; render(); }
+function subscribe() {
+  unsubs.forEach(u => u()); unsubs = [];
+  S.songs = []; S.lessons = []; S.skins = {}; S.settings = { ...DEFAULT_SETTINGS };
+  S.loaded = { songs: false, lessons: false }; S.settingsLoaded = false; S.modal = null; S.celebrate = null; S.welcome = false; faceCache.clear();
+  if (!S.user) return;
+  const { collection, doc, onSnapshot } = FB.api, me = ["users", S.user.uid];
+  unsubs.push(onSnapshot(collection(FB.fs, ...me, "songs"), snap => {
+    S.songs = snap.docs.map(d => ({ id: d.id, logs: [], ...d.data() }));
+    S.loaded.songs = true;
+    if (S.modal && S.modal.type === "song" && !songById(S.modal.id)) S.modal = null;
+    maybeWelcome(); render();
+  }, onDbError));
+  unsubs.push(onSnapshot(collection(FB.fs, ...me, "lessons"), snap => {
+    S.lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    S.loaded.lessons = true; render();
+  }, onDbError));
+  unsubs.push(onSnapshot(doc(FB.fs, ...me, "settings", "main"), snap => {
+    const next = { ...DEFAULT_SETTINGS, ...(snap.exists() ? snap.data() : {}) };
+    if (next.faceStyle !== S.settings.faceStyle) faceCache.clear();
+    S.settings = next; S.settingsLoaded = true; maybeWelcome(); render();
+  }, onDbError));
+  unsubs.push(onSnapshot(collection(FB.fs, ...me, "skins"), snap => {
+    S.skins = Object.fromEntries(snap.docs.map(d => [d.id, d.data().data]).filter(([, v]) => typeof v === "string" && v.startsWith("data:image/")));
+    render();
+  }, onDbError));
+}
+function onDbError(err) {
+  if (err && err.code === "permission-denied") toast("기록을 볼 권한이 없어요. Firestore 규칙을 확인해 주세요.");
+  else toast("기록을 불러오지 못했어요. 새로고침해 주세요.");
+}
+
+/* ───────── 회원 정보 & 환영 카드 ───────── */
+function nick() {
+  const u = S.user || {};
+  return (S.settings.nickname || u.displayName || (u.email || "").split("@")[0] || "헌터").trim();
+}
+/* 회원 정보는 users/<uid>/profile/main 에 저장 (Firebase 콘솔에서 가입자 목록을 볼 수 있게) */
+function saveProfile(extra = {}) {
+  if (!FB || !S.user) return;
+  const u = S.user;
+  FB.api.setDoc(userDoc("profile/main"), { nickname: nick(), email: u.email || "", joinedAt: u.metadata && u.metadata.creationTime || "", lastSeen: todayK(), ...extra }, { merge: true }).catch(() => {});
+}
+function practiceStreak() {
+  const days = new Set(S.songs.flatMap(s => (s.logs || []).map(t => ymd(new Date(t)))));
+  const cur = today0(); let n = 0;
+  if (!days.has(ymd(cur))) cur.setDate(cur.getDate() - 1);
+  while (days.has(ymd(cur))) { n++; cur.setDate(cur.getDate() - 1); }
+  return n;
+}
+/* 하루에 한 번, 기기마다 로그인 직후 환영 카드 */
+function maybeWelcome() {
+  if (S.backend !== "cloud" || !S.user || !S.loaded.songs || !S.settingsLoaded || S.welcome) return;
+  const key = "welcome-" + S.user.uid;
+  let seen = null; try { seen = localStorage.getItem(key); } catch (e) {}
+  if (seen === todayK()) return;
+  try { localStorage.setItem(key, todayK()); } catch (e) {}
+  S.welcome = true;
+  saveProfile();
+}
+const GREET = {
+  gon: "같이 연습하자! 오늘은 몇 세트 할 거야?",
+  killua: "오늘도 왔네. 빨리 끝내고 놀자.",
+  kurapika: "오늘의 목표부터 정하고 시작하자.",
+  leorio: "좋아, 손 풀고 시작해볼까!",
+  hisoka: "후후♠ 오늘은 얼마나 자랐는지 기대할게♣",
+  chrollo: "오늘의 페이지를 펼쳐볼까.",
+};
+function welcomeHTML() {
+  const ch = logoChar(), c = CH[ch], total = S.songs.reduce((n, s) => n + (s.logs || []).length, 0);
+  const tk = todayK(), open = S.songs.filter(s => !isPast(s)), left = open.filter(s => !doneOn(s, tk)).length;
+  return `<div class="welcome" data-act="welcome-close" role="dialog" aria-modal="true" aria-label="환영 인사">
+    <div class="license">
+      <div class="lic-top"><b>HUNTER LICENSE</b>${hunterSVG("ハンター")}</div>
+      <div class="lic-body">
+        <div class="lic-photo">${stampHTML(ch, "flat")}</div>
+        <div>
+          <div class="lic-field"><small>NAME</small><b>${esc(nick())}</b></div>
+          <div class="lic-field"><small>연속 연습 · 총 연습</small><span>${practiceStreak()}일 · ${total}세트</span></div>
+          <div class="lic-field"><small>오늘 남은 숙제</small><span>${open.length ? `${left} / ${open.length}개` : "아직 없어요"}</span></div>
+        </div>
+      </div>
+      <p class="lic-hi">${esc(nick())}님 안녕하세요!<br>오늘도 연습 파이팅해요</p>
+      <p class="lic-quote">“${GREET[ch]}” — ${c.name}</p>
+      <div class="lic-jp">${hunterSVG("がんばれ")}<span>헌터 문자로 “힘내!”</span></div>
+      <button class="btn lic-go" data-act="welcome-close">연습 시작!</button>
+    </div>
+  </div>`;
+}
+
+/* ───────── 로그인 ───────── */
+const AUTH_MSG = {
+  "auth/invalid-credential": "이메일이나 비밀번호가 맞지 않아요.",
+  "auth/wrong-password": "이메일이나 비밀번호가 맞지 않아요.",
+  "auth/user-not-found": "가입되지 않은 이메일이에요. 회원가입을 먼저 해주세요.",
+  "auth/invalid-email": "이메일 주소 형식을 확인해 주세요.",
+  "auth/email-already-in-use": "이미 가입된 이메일이에요. 로그인해 주세요.",
+  "auth/weak-password": "비밀번호는 6자 이상이어야 해요.",
+  "auth/too-many-requests": "시도가 너무 많았어요. 잠시 후 다시 해주세요.",
+  "auth/network-request-failed": "인터넷 연결을 확인해 주세요.",
+  "auth/unauthorized-domain": "이 주소가 Firebase 승인된 도메인에 없어요. 설정 안내의 6단계를 확인해 주세요.",
+  "auth/operation-not-allowed": "Firebase에서 이 로그인 방법이 꺼져 있어요. 설정 안내의 2단계를 확인해 주세요.",
+};
+const authMsg = err => AUTH_MSG[err && err.code] || `로그인하지 못했어요. (${(err && err.code) || "알 수 없는 오류"})`;
+function viewLogin() {
+  const signup = S.authMode === "signup";
+  return `<section class="login">
+    <div class="lineup">${CHARS.map(c => stampHTML(c.id)).join("")}</div>
+    <h2>진도 체크판</h2>
+    <p>로그인하면 아이폰, 아이패드, 컴퓨터 어디서든 같은 기록을 볼 수 있어요.</p>
+    <form class="panel form" data-form="auth" novalidate>
+      <div class="seg" role="group" aria-label="로그인 또는 회원가입">
+        <button type="button" data-act="auth-mode" data-v="login" aria-pressed="${!signup}">로그인</button>
+        <button type="button" data-act="auth-mode" data-v="signup" aria-pressed="${signup}">회원가입</button>
+      </div>
+      ${signup ? `<label class="field"><span>닉네임</span><input class="input" id="a-nick" name="nickname" maxlength="20" autocomplete="nickname" required placeholder="예: 베이스 곤" value="${esc(S.authNick)}"></label>` : ""}
+      <label class="field"><span>이메일</span><input class="input" id="a-email" name="email" type="email" autocomplete="email" inputmode="email" required value="${esc(S.authEmail)}"></label>
+      <label class="field"><span>비밀번호${signup ? " (6자 이상)" : ""}</span><input class="input" id="a-pass" name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" minlength="6" required></label>
+      <p class="autherr" role="alert">${esc(S.authError)}</p>
+      <button class="btn primary big" type="submit" ${S.authBusy ? "disabled" : ""}>${S.authBusy ? "잠시만요…" : signup ? "가입하고 시작하기" : "로그인"}</button>
+      ${signup ? "" : `<div style="text-align:center"><button type="button" class="linkbtn" data-act="auth-reset">비밀번호를 잊었어요</button></div>`}
+    </form>
+    <div class="or">또는</div>
+    <button class="btn big" data-act="auth-google" style="width:100%">Google 계정으로 계속하기</button>
+  </section>`;
+}
+
+/* ───────── 날짜 도우미 ───────── */
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const parseAt = s => { const [d, t = "00:00"] = s.split("T"); const [y, m, dd] = d.split("-").map(Number); const [h, mi] = t.split(":").map(Number); return new Date(y, m - 1, dd, h, mi); };
+const parseYmd = s => parseAt(s + "T00:00");
+const WD = ["일", "월", "화", "수", "목", "금", "토"];
+const fmtDay = d => `${d.getMonth() + 1}월 ${d.getDate()}일 (${WD[d.getDay()]})`;
+const fmtShort = d => `${d.getMonth() + 1}/${d.getDate()}`;
+const fmtTime = d => d.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+const dayDiff = (a, b) => Math.round((new Date(a.getFullYear(), a.getMonth(), a.getDate()) - new Date(b.getFullYear(), b.getMonth(), b.getDate())) / 864e5);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* ───────── 파생 데이터 ───────── */
+const songById = id => S.songs.find(s => s.id === id);
+const lessonById = id => S.lessons.find(l => l.id === id);
+const lessonsSorted = () => [...S.lessons].sort((a, b) => a.at.localeCompare(b.at));
+const todayK = () => ymd(new Date());
+const dayLogs = (s, k) => (s.logs || []).filter(t => ymd(new Date(t)) === k).sort((a, b) => a - b);
+const doneOn = (s, k) => dayLogs(s, k).length >= s.target;
+/* 숙제 기간이 끝났나: 배정된 레슨 다음 레슨이 이미 지났으면 지난 숙제 */
+function isPast(s) { const d = dueLesson(s); return !!d && parseAt(d.at) < today0(); }
+function assignedDate(s) { const l = s.lessonId && lessonById(s.lessonId); return l ? parseAt(l.at) : new Date(s.createdAt); }
+function nextLesson() { const t = today0(); return lessonsSorted().find(l => parseAt(l.at) >= t); }
+function dueLesson(s) { const from = assignedDate(s); return lessonsSorted().find(l => parseAt(l.at) > from && dayDiff(parseAt(l.at), from) > 0); }
+function practiceByDay() {
+  const map = new Map();
+  for (const s of S.songs) for (const t of s.logs || []) {
+    const k = ymd(new Date(t)); if (!map.has(k)) map.set(k, []);
+    map.get(k).push({ song: s, t });
+  }
+  return map;
+}
+
+/* ───────── 조각 ───────── */
+function stampHTML(chId, cls = "") {
+  const c = CH[chId] || CHARS[0], skin = S.skins[chId];
+  const img = skin ? `<img class="skin" src="${skin}" alt="${c.name}">` : `<img src="${faceURL(c.id)}" alt="${c.name}">`;
+  return `<span class="stamp ${cls}" style="--c:${c.color}">${img}</span>`;
+}
+const hankoHTML = () => `<span class="hanko" aria-label="합격">${hunterSVG(JP_PASS)}<small>합격</small></span>`;
+
+/* ───────── 화면: 숙제 ───────── */
+function viewHomework() {
+  if (!S.loaded.songs || !S.loaded.lessons) return `<div class="loading">진도표 펼치는 중…</div>`;
+  const nl = nextLesson(), tk = todayK();
+  const byNew = (a, b) => assignedDate(b) - assignedDate(a) || b.createdAt - a.createdAt;
+  const active = S.songs.filter(s => !isPast(s)).sort(byNew);
+  const past = S.songs.filter(isPast).sort(byNew);
+  const doneToday = active.filter(s => doneOn(s, tk)).length;
+  let html = "";
+  if (nl) {
+    const d = parseAt(nl.at), diff = dayDiff(d, new Date());
+    html += `<section class="section"><div class="panel nextlesson">
+      <div class="dday">${diff === 0 ? "오늘" : "D-" + diff}<small>다음 레슨</small></div>
+      <div><h3>${fmtDay(d)} ${fmtTime(d)}</h3><div class="memo">${nl.memo ? esc(nl.memo) + " · " : ""}오늘 숙제 ${active.length}개 중 ${doneToday}개 완료</div></div>
+      <button class="btn small" data-act="goto-day" data-d="${ymd(d)}">달력</button>
+    </div></section>`;
+  } else if (S.songs.length) {
+    html += `<section class="section"><div class="panel nextlesson">
+      <div class="dday" style="font-size:22px">?<small>다음 레슨</small></div>
+      <div><h3>다음 레슨 날짜가 없어요</h3><div class="memo">달력에 레슨을 적어두면 D-day를 세어드려요</div></div>
+      <button class="btn small" data-act="new-lesson">레슨 추가</button>
+    </div></section>`;
+  }
+  if (!S.songs.length) {
+    return html + `<section class="panel empty">
+      <div class="lineup">${CHARS.map(c => stampHTML(c.id)).join("")}</div>
+      <h2 style="font-size:24px">레슨 숙제를 적어볼까요?</h2>
+      <p class="muted" style="margin:0;max-width:36ch">숙제마다 하루 목표 세트를 정하면 그 수만큼 캐릭터 얼굴이 회색으로 나와요. 1세트 할 때마다 얼굴 하나를 눌러 색칠해요. 다 칠하면 헌터 문자로 합격 도장이 나와요.</p>
+      <div class="actions"><button class="btn primary" data-act="new-song">숙제 추가</button><button class="btn" data-act="new-lesson">레슨 일정 추가</button><button class="btn" data-act="seed">예시로 채워보기</button></div>
+    </section>`;
+  }
+  html += `<section class="section">
+    <div class="section-head"><h2>오늘 숙제</h2><span class="count">${fmtDay(new Date())}</span><span class="spacer"></span><button class="btn primary small" data-act="new-song">＋ 숙제 추가</button></div>
+    ${active.length ? `<div class="cards">${active.map(s => cardHTML(s, tk)).join("")}</div>` : `<div class="panel muted">지금 숙제가 없어요. 레슨에서 받은 숙제를 추가해 보세요.</div>`}
+  </section>`;
+  if (past.length) html += `<section class="section">
+    <div class="section-head"><h2>지난 숙제</h2><span class="count">${past.length}개 · 레슨이 지나서 옮겨졌어요</span></div>
+    <div class="cards">${past.map(s => cardHTML(s, tk)).join("")}</div>
+  </section>`;
+  return html;
+}
+function facesRow(s, n) {
+  const shown = Math.min(s.target, 12);
+  let row = "";
+  for (let i = 0; i < shown; i++) row += stampHTML(s.char, i < n ? "flat" : "blank");
+  if (s.target > shown) row += `<span class="more">+${s.target - shown}</span>`;
+  return `<div class="faces" aria-hidden="true">${row}</div>`;
+}
+function cardHTML(s, k) {
+  const c = CH[s.char] || CHARS[0], n = dayLogs(s, k).length, d = n >= s.target, due = dueLesson(s);
+  const meta = due ? `${fmtShort(parseAt(due.at))} 레슨까지 매일` : `${fmtShort(assignedDate(s))} 레슨 숙제`;
+  return `<div class="hw ${d ? "done" : ""}" style="--c:${c.color}" data-act="open-song" data-id="${s.id}" role="button" tabindex="0" aria-label="${esc(s.title)} 오늘 ${n}/${s.target}세트, 진도표 열기">
+    ${stampHTML(s.char)}
+    <div style="min-width:0"><div class="title">${esc(s.title)}</div><div class="meta">${meta}</div>${facesRow(s, n)}</div>
+    <div class="num tabnum">${n}<small>/ ${s.target}세트</small>${d ? "" : `<button class="plus" data-act="stamp" data-id="${s.id}" aria-label="${esc(s.title)} 1세트 체크">＋1세트</button>`}</div>
+    ${d ? hankoHTML() : ""}
+  </div>`;
+}
+
+/* ───────── 화면: 달력 ───────── */
+function viewCalendar() {
+  const m = S.calMonth, y = m.getFullYear(), mo = m.getMonth();
+  const first = new Date(y, mo, 1), days = new Date(y, mo + 1, 0).getDate();
+  const byDay = practiceByDay(), lessonDays = new Map(S.lessons.map(l => [l.at.slice(0, 10), l]));
+  const todayK = ymd(new Date()), sel = S.calSel || todayK;
+  let cells = WD.map(w => `<div class="wd">${w}</div>`).join("");
+  for (let i = 0; i < first.getDay(); i++) cells += `<div></div>`;
+  for (let d = 1; d <= days; d++) {
+    const dt = new Date(y, mo, d), k = ymd(dt), prs = byDay.get(k) || [], wd = dt.getDay();
+    const cls = ["day", wd === 0 ? "sun" : "", wd === 6 ? "sat" : "", k === todayK ? "today" : "", lessonDays.has(k) ? "lesson" : "", k === sel ? "sel" : ""].join(" ");
+    const dots = prs.slice(0, 4).map(p => `<i style="--c:${(CH[p.song.char] || CHARS[0]).color}"></i>`).join("");
+    const label = `${mo + 1}월 ${d}일${lessonDays.has(k) ? ", 레슨" : ""}${prs.length ? `, 연습 ${prs.length}회` : ""}`;
+    cells += `<button class="${cls}" data-act="cal-day" data-d="${k}" aria-label="${label}" aria-pressed="${k === sel}"><span class="n">${d}</span><span class="dots">${dots}</span></button>`;
+  }
+  return `<section class="section cal-layout">
+    <div class="panel">
+      <div class="cal-head">
+        <h2>${y}년 ${mo + 1}월</h2>
+        <button class="btn small" data-act="cal-today">오늘</button>
+        <button class="x" data-act="cal-prev" aria-label="이전 달">‹</button>
+        <button class="x" data-act="cal-next" aria-label="다음 달">›</button>
+      </div>
+      <div class="cal">${cells}</div>
+      <div class="legend"><span><i class="lz"></i>레슨 날</span><span><i class="dz"></i>연습한 날 (도장 색)</span></div>
+    </div>
+    <div class="panel daypanel">${dayPanel(sel, byDay.get(sel) || [], lessonDays.get(sel))}</div>
+  </section>`;
+}
+function dayPanel(k, prs, lesson) {
+  const d = parseYmd(k);
+  let html = `<h3>${fmtDay(d)}</h3>`;
+  if (lesson) {
+    const at = parseAt(lesson.at), hw = S.songs.filter(s => s.lessonId === lesson.id);
+    html += `<div class="lesson-box">
+      <div class="row" style="justify-content:space-between"><span class="time">${fmtTime(at)} 레슨</span>
+        <span class="row"><button class="btn small" data-act="edit-lesson" data-id="${lesson.id}">수정</button><button class="btn small" data-act="ics" data-id="${lesson.id}">캘린더 앱에 추가</button></span></div>
+      ${lesson.memo ? `<div>${esc(lesson.memo)}</div>` : ""}
+      <div class="muted" style="font-size:13px">이 레슨에서 받은 숙제</div>
+      <div class="hwchips">${hw.map(s => `<button class="hwchip" data-act="open-song" data-id="${s.id}">${stampHTML(s.char)}${esc(s.title)} · 하루 ${s.target}세트</button>`).join("") || `<span class="muted" style="font-size:13px">아직 없어요</span>`}</div>
+      <div><button class="btn small primary" data-act="new-song" data-lesson="${lesson.id}">＋ 이 레슨 숙제 추가</button></div>
+    </div>`;
+  } else {
+    html += `<div class="row" style="margin-bottom:6px"><span class="muted">레슨 없는 날</span><button class="btn small primary" data-act="new-lesson" data-d="${k}">＋ 이 날 레슨 추가</button></div>`;
+  }
+  const counts = {};
+  prs.forEach(p => { counts[p.song.id] = (counts[p.song.id] || 0) + 1; });
+  const ids = Object.keys(counts);
+  html += `<div style="margin-top:14px"><div class="muted" style="font-size:13px;margin-bottom:4px">이 날 연습</div>`;
+  html += ids.length ? `<div class="daylist">${ids.map(id => { const s = songById(id); return `<div><span style="width:30px;flex:none">${stampHTML(s.char)}</span><span class="grow">${esc(s.title)}</span><b class="tabnum">${counts[id]}/${s.target}세트${counts[id] >= s.target ? " ✓" : ""}</b></div>`; }).join("")}</div>`
+    : `<div class="muted" style="font-size:14px">체크한 세트가 없어요</div>`;
+  return html + `</div>`;
+}
+
+/* ───────── 화면: 기록 ───────── */
+function viewHistory() {
+  const byDay = practiceByDay(), all = S.songs.flatMap(s => s.logs || []);
+  const t0 = today0(), weekStart = new Date(t0); weekStart.setDate(t0.getDate() - t0.getDay());
+  const week = all.filter(t => t >= +weekStart).length;
+  let streak = 0; const cur = new Date(t0);
+  if (!byDay.has(ymd(cur))) cur.setDate(cur.getDate() - 1);
+  while (byDay.has(ymd(cur))) { streak++; cur.setDate(cur.getDate() - 1); }
+  const weeks = 18, start = new Date(weekStart); start.setDate(start.getDate() - (weeks - 1) * 7);
+  let heat = "";
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const n = (byDay.get(ymd(d)) || []).length, fut = d > t0;
+    heat += `<i class="${fut ? "fut" : n >= 3 ? "l3" : n === 2 ? "l2" : n === 1 ? "l1" : ""}" title="${fmtDay(d)} ${n}세트"></i>`;
+  }
+  const days = [...byDay.keys()].sort().reverse().slice(0, 40);
+  const passDays = S.songs.reduce((sum, s) => sum + [...new Set((s.logs || []).map(t => ymd(new Date(t))))].filter(k => doneOn(s, k)).length, 0);
+  return `<section class="section">
+    <div class="stats">
+      <div class="stat"><b class="tabnum">${all.length}</b><span>총 연습 (세트)</span></div>
+      <div class="stat"><b class="tabnum">${week}</b><span>이번 주 (세트)</span></div>
+      <div class="stat"><b class="tabnum">${streak}</b><span>연속 연습 (일)</span></div>
+      <div class="stat"><b class="tabnum">${passDays}</b><span>목표 채운 날 (숙제별)</span></div>
+    </div>
+    <div class="panel"><div class="section-head" style="margin-bottom:10px"><h2>최근 18주</h2><span class="count">칸 하나가 하루예요 · 진할수록 많이 연습한 날</span></div>
+      <div class="heat-wrap"><div class="heat">${heat}</div></div></div>
+    <div class="panel"><div class="section-head" style="margin-bottom:4px"><h2>날짜별 기록</h2></div>
+      ${days.length ? `<div class="daylist">${days.map(k => {
+        const prs = byDay.get(k), bySong = {};
+        prs.forEach(p => { bySong[p.song.id] = p.song; });
+        return `<div><span class="grow">${fmtDay(parseYmd(k))}</span><span class="mini">${Object.values(bySong).slice(0, 5).map(s => stampHTML(s.char, "flat")).join("")}</span><b class="tabnum" style="min-width:52px;text-align:right">${prs.length}세트</b></div>`;
+      }).join("")}</div>` : `<p class="muted" style="margin:6px 0 0">세트를 체크하면 날짜별로 여기에 쌓여요.</p>`}
+    </div>
+  </section>`;
+}
+
+/* ───────── 화면: 설정 ───────── */
+function viewSettings() {
+  const st = S.settings;
+  const kanaRows = ["あいうえお", "かきくけこ", "さしすせそ", "たちつてと", "なにぬねの", "はひふへほ", "まみむめも", "や ゆ よ", "らりるれろ", "わ を ん", "ー゛゜"];
+  const kana = kanaRows.map(r => [...r.padEnd(5, " ")].map(k => k === " " ? `<span></span>` : `<div>${hunterSVG(k === "゛" ? "゙" : k === "゜" ? "゚" : k)}<span>${k}</span></div>`).join("")).join("");
+  return `<section class="section">
+    <div class="panel"><div class="set-row"><div><h2 style="font-size:20px">캐릭터 얼굴</h2><div class="muted" style="font-size:13px">도장에 찍히는 얼굴 스타일</div></div>
+      <div class="seg" role="group" aria-label="얼굴 스타일">
+        <button data-act="face-style" data-v="sticker" aria-pressed="${st.faceStyle !== "figure"}">스티커</button>
+        <button data-act="face-style" data-v="figure" aria-pressed="${st.faceStyle === "figure"}">피규어</button>
+      </div></div>
+      <div class="lineup" style="margin-top:14px;flex-wrap:wrap">${CHARS.map(c => `<span style="width:64px;display:grid;justify-items:center;gap:2px;font-size:12px">${stampHTML(c.id)}${c.name}</span>`).join("")}</div>
+    </div>
+    <div class="panel"><h2 style="font-size:20px">대표 캐릭터</h2>
+      <p class="muted" style="margin:4px 0 12px;font-size:13.5px">왼쪽 위 제목 옆에 나오는 캐릭터예요. 제목 옆 얼굴을 눌러도 바꿀 수 있어요.</p>
+      ${logoPickerHTML()}
+    </div>
+    <div class="panel"><div class="set-row"><div><h2 style="font-size:20px">기본 하루 목표</h2><div class="muted" style="font-size:13px">새 숙제를 만들 때 처음 들어가는 세트 수</div></div>
+      <div class="stepper"><button data-act="def-target" data-v="-1" aria-label="줄이기">−</button><b class="tabnum" style="min-width:48px;text-align:center;font-size:18px">${st.defaultTarget}세트</b><button data-act="def-target" data-v="1" aria-label="늘리기">＋</button></div></div>
+    </div>
+    <div class="panel"><h2 style="font-size:20px">헌터 문자</h2>
+      <p class="muted" style="margin:4px 0 12px;font-size:13.5px">하루 목표를 다 칠하면 나오는 글자예요. 히라가나를 헌터 문자로 한 글자씩 바꿔 적어요. 합격 도장은 <b>ごうかく</b>(합격), 축하 화면은 <b>しゅくだい かんりょう</b>(숙제 완료)라고 쓰여 있어요.</p>
+      <label class="field"><span>직접 써보기 (히라가나·가타카나)</span><input class="input" id="hx-in" value="ハンター" autocomplete="off"></label>
+      <div class="presets" style="margin-top:8px">${["ハンター", "がんばれ", "ごうかく", "しゅくだい かんりょう", "べーす"].map(p => `<button class="btn small" data-act="hx-preset" data-v="${p}">${p}</button>`).join("")}</div>
+      <div class="translate-out" id="hx-out" style="margin-top:10px">${hunterSVG("ハンター")}</div>
+      <div class="kana" style="margin-top:14px">${kana}</div>
+    </div>
+    <div class="panel"><h2 style="font-size:20px">계정</h2>
+      ${S.backend === "cloud" && S.user
+        ? `<form class="row" data-form="nick" style="margin-top:8px;flex-wrap:nowrap"><label class="field" style="flex:1"><span>닉네임</span><input class="input" id="s-nick" name="nickname" maxlength="20" required value="${esc(nick())}"></label><button class="btn small primary" type="submit" style="align-self:end;margin-bottom:6px">저장</button></form>
+          <div class="set-row" style="margin-top:12px"><span style="font-size:14px">${esc(S.user.email || "Google 계정")}<br><span class="muted" style="font-size:13px">같은 계정으로 로그인한 기기끼리 기록이 맞춰져요.</span></span><span class="row"><button class="btn small" data-act="welcome-open">환영 카드 보기</button><button class="btn small" data-act="logout">로그아웃</button></span></div>`
+        : `<p style="margin:6px 0 0;font-size:14px">지금은 로그인 없이 이 기기에만 저장하고 있어요. firebase-config.js를 채우면 로그인과 동기화가 켜져요.</p>`}
+    </div>
+    <div class="panel"><h2 style="font-size:20px">휴대폰 홈 화면에 추가</h2>
+      <ol class="steps" style="font-size:14px;margin-top:8px"><li>아이폰·아이패드: 사파리로 이 사이트를 열고 공유 버튼 → <b>홈 화면에 추가</b></li><li>안드로이드: 크롬 메뉴(⋮) → <b>홈 화면에 추가</b></li><li>홈 화면 아이콘으로 열면 앱처럼 전체 화면으로 떠요.</li></ol>
+    </div>
+  </section>`;
+}
+
+/* ───────── 모달 ───────── */
+function modalSong(m) {
+  const s = songById(m.id); if (!s) return "";
+  const c = CH[s.char] || CHARS[0], k = m.day || todayK(), isToday = k === todayK();
+  const logs = dayLogs(s, k), n = logs.length, d = n >= s.target;
+  const slots = Math.max(s.target, n + (d ? 1 : 0));
+  const l = s.lessonId && lessonById(s.lessonId);
+  let grid = "";
+  for (let i = 0; i < slots; i++) {
+    const bonus = i >= s.target;
+    if (i < n) {
+      const pop = S.justStamped && S.justStamped.id === s.id && S.justStamped.t === logs[i] ? "pop" : "";
+      grid += `<button class="slot" data-act="slot" data-t="${logs[i]}" aria-label="${i + 1}세트 완료 ${fmtTime(new Date(logs[i]))}. 눌러서 수정">${stampHTML(s.char, pop)}<span class="d">${fmtTime(new Date(logs[i]))}</span></button>`;
+    } else {
+      grid += `<button class="slot" data-act="slot" aria-label="${i + 1}세트, 눌러서 색칠">${stampHTML(s.char, "blank")}<span class="d">${bonus ? "보너스" : i + 1 + "세트"}</span></button>`;
+    }
+  }
+  const allDays = [...new Set((s.logs || []).map(t => ymd(new Date(t))))].sort().reverse();
+  let edit = "";
+  if (m.editT != null && logs.includes(m.editT)) {
+    const t = new Date(m.editT);
+    edit = `<div class="logedit"><b>${logs.indexOf(m.editT) + 1}세트 체크</b>
+      <label class="field"><span>연습한 날짜와 시간</span><input class="input" type="datetime-local" id="log-at" value="${ymd(t)}T${hm(t)}" max="${todayK()}T23:59"></label>
+      <div class="row"><button class="btn primary small" data-act="log-save">저장</button><button class="btn small danger" data-act="log-del">색칠 지우기</button><button class="btn small" data-act="log-cancel">닫기</button></div></div>`;
+  }
+  const dd = parseYmd(k);
+  return `<div class="overlay" data-act="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(s.title)} 진도표" style="--c:${c.color}">
+    <div class="sheet-bar"><button class="x" data-act="close" aria-label="닫기">✕</button><h2>진도표</h2>
+      <button class="btn small" data-act="edit-song" data-id="${s.id}">수정</button>
+      <button class="btn small danger ${m.armed ? "armed" : ""}" data-act="del-song" data-id="${s.id}">${m.armed ? "정말 삭제" : "삭제"}</button></div>
+    <div class="panel"><div class="hero">${stampHTML(s.char)}
+      <div style="min-width:0"><h3>${esc(s.title)}</h3><div class="muted" style="font-size:13.5px">${l ? fmtDay(parseAt(l.at)) + " 레슨 숙제" : "레슨 날짜 없음"} · 하루 ${s.target}세트</div>${s.memo ? `<div style="font-size:14px;margin-top:4px">${esc(s.memo)}</div>` : ""}</div>
+      <div class="big tabnum">${n}<small>/ ${s.target}세트</small></div></div>
+      ${d ? `<div class="cheer">${stampHTML(s.char, "flat")}<div><b>${isToday ? "오늘 목표 달성!" : "이 날 목표 달성!"}</b><span style="font-size:14px">${c.cheer}</span></div>${hankoHTML()}</div>` : ""}
+    </div>
+    <div class="panel sheet-card">
+      ${d ? `<div class="wm" aria-hidden="true">${hunterSVG(JP_DONE)}${hunterSVG(JP_PASS)}${hunterSVG(JP_DONE)}</div>` : ""}
+      <div class="daynav" style="position:relative">
+        <button class="x" data-act="day-move" data-v="-1" aria-label="전날">‹</button>
+        <b>${isToday ? "오늘 · " : ""}${fmtDay(dd)}</b>
+        <button class="x" data-act="day-move" data-v="1" aria-label="다음날" ${isToday ? "disabled" : ""}>›</button>
+      </div>
+      ${isToday ? "" : `<div style="text-align:center;margin-top:6px;position:relative"><button class="btn small" data-act="day-today">오늘로</button></div>`}
+      <div class="slots">${grid}</div>
+      <p class="muted" style="font-size:12px;margin:10px 0 0;text-align:center;position:relative">회색 얼굴을 누르면 1세트 색칠 · 색칠한 얼굴을 누르면 시간 수정</p>
+      ${edit}
+    </div>
+    <div style="margin-block:12px"><button class="btn primary big" style="background:var(--c);border-color:var(--c);color:#fff" data-act="stamp" data-id="${s.id}">${isToday ? "1세트 끝! 색칠하기" : fmtShort(dd) + " 1세트 색칠하기"}</button></div>
+    <div class="panel"><h3 style="font-size:18px">날짜별 기록</h3>
+      ${allDays.length ? `<div class="daylist">${allDays.map(x => { const cnt = dayLogs(s, x).length; return `<div role="button" tabindex="0" data-act="day-pick" data-d="${x}" style="cursor:pointer"><span class="grow">${fmtDay(parseYmd(x))}</span>${facesRow(s, cnt).replace('class="faces"', 'class="faces" style="margin:0"')}<b class="tabnum" style="min-width:60px;text-align:right">${cnt}/${s.target}${cnt >= s.target ? " ✓" : ""}</b></div>`; }).join("")}</div>` : `<p class="muted" style="margin:6px 0 0">아직 색칠한 날이 없어요.</p>`}
+    </div>
+  </div></div>`;
+}
+function modalSongForm(m) {
+  const s = m.id ? songById(m.id) : null, st = S.settings;
+  const lessons = lessonsSorted().reverse();
+  const pre = s ? s.lessonId : m.lesson !== undefined ? m.lesson : (lessons.find(l => parseAt(l.at) <= new Date()) || {}).id;
+  const nextChar = (() => { const i = CHARS.findIndex(c => c.id === st.lastChar); return CHARS[(i + 1) % CHARS.length].id; })();
+  const ch = s ? s.char : nextChar;
+  return `<div class="overlay" data-act="backdrop"><form class="sheet form" data-form="song" role="dialog" aria-modal="true" aria-label="${s ? "숙제 수정" : "새 숙제"}">
+    <div class="sheet-bar"><button type="button" class="x" data-act="close" aria-label="닫기">✕</button><h2>${s ? "숙제 수정" : "새 숙제"}</h2><button class="btn primary small" type="submit">저장</button></div>
+    <label class="field"><span>숙제 이름</span><input class="input" id="f-title" name="title" required maxlength="80" placeholder="예: 크로매틱 연습, Stand By Me 베이스라인" value="${esc(s ? s.title : "")}"></label>
+    <label class="field"><span>메모</span><textarea class="input" id="f-memo" name="memo" maxlength="400" placeholder="템포, 운지, 선생님이 짚어준 부분">${esc(s ? s.memo : "")}</textarea></label>
+    <label class="field"><span>어느 레슨 숙제인가요?</span><select class="input" id="f-lesson" name="lesson">
+      <option value="">레슨 선택 안 함</option>
+      ${lessons.map(l => `<option value="${l.id}" ${l.id === pre ? "selected" : ""}>${fmtDay(parseAt(l.at))} ${fmtTime(parseAt(l.at))} 레슨</option>`).join("")}
+    </select></label>
+    <div class="field"><span>하루 목표 (1세트 할 때마다 얼굴 하나 색칠)</span><div class="stepper">
+      <button type="button" data-act="step" data-v="-1" aria-label="줄이기">−</button>
+      <input class="input tabnum" id="f-target" name="target" type="number" inputmode="numeric" min="1" max="100" value="${s ? s.target : st.defaultTarget}">
+      <button type="button" data-act="step" data-v="1" aria-label="늘리기">＋</button><span class="muted">세트</span></div></div>
+    <fieldset class="field" style="border:0;padding:0;margin:0"><span>색칠할 캐릭터</span><div class="picker">
+      ${CHARS.map(c => `<label style="--c:${c.color}"><input type="radio" name="char" value="${c.id}" ${c.id === ch ? "checked" : ""}>${stampHTML(c.id)}${c.name}</label>`).join("")}
+    </div></fieldset>
+    ${s ? `<button type="button" class="btn danger ${m.armed ? "armed" : ""}" data-act="del-song" data-id="${s.id}">${m.armed ? "정말 삭제할까요? 색칠 기록도 같이 지워져요" : "이 숙제 삭제"}</button>` : ""}
+  </form></div>`;
+}
+function modalLessonForm(m) {
+  const l = m.id ? lessonById(m.id) : null;
+  const date = l ? l.at.slice(0, 10) : (m.d || ymd(new Date())), time = l ? l.at.slice(11, 16) : S.settings.lessonTime;
+  return `<div class="overlay" data-act="backdrop"><form class="sheet form" data-form="lesson" role="dialog" aria-modal="true" aria-label="${l ? "레슨 수정" : "레슨 추가"}">
+    <div class="sheet-bar"><button type="button" class="x" data-act="close" aria-label="닫기">✕</button><h2>${l ? "레슨 수정" : "레슨 추가"}</h2><button class="btn primary small" type="submit">저장</button></div>
+    <div class="row" style="flex-wrap:nowrap">
+      <label class="field" style="flex:1"><span>날짜</span><input class="input" type="date" id="l-date" name="date" required value="${date}"></label>
+      <label class="field" style="flex:1"><span>시간</span><input class="input" type="time" id="l-time" name="time" required value="${time}"></label>
+    </div>
+    <label class="field"><span>메모</span><textarea class="input" id="l-memo" name="memo" maxlength="300" placeholder="예: 셔플 리듬 복습, 교재 24쪽">${esc(l ? l.memo : "")}</textarea></label>
+    ${l ? `<button type="button" class="btn danger ${m.armed ? "armed" : ""}" data-act="del-lesson" data-id="${l.id}">${m.armed ? "정말 삭제 (숙제는 남아요)" : "레슨 삭제"}</button>` : ""}
+  </form></div>`;
+}
+const logoChar = () => CH[S.settings.logoChar] ? S.settings.logoChar : "gon";
+function logoPickerHTML() {
+  const cur = logoChar();
+  return `<div class="picker" role="group" aria-label="대표 캐릭터">${CHARS.map(c => `<button type="button" class="pick" style="--c:${c.color}" data-act="logo-set" data-id="${c.id}" aria-pressed="${c.id === cur}">${stampHTML(c.id)}${c.name}</button>`).join("")}</div>`;
+}
+function modalLogoPick() {
+  return `<div class="overlay" data-act="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-label="대표 캐릭터 고르기">
+    <div class="sheet-bar"><button class="x" data-act="close" aria-label="닫기">✕</button><h2>대표 캐릭터 고르기</h2></div>
+    <div class="panel">${logoPickerHTML()}</div>
+  </div></div>`;
+}
+function celebrateHTML() {
+  const s = songById(S.celebrate); if (!s) return "";
+  const c = CH[s.char] || CHARS[0];
+  const lane = Array(6).fill(hunterSVG(JP_DONE) + hunterSVG(JP_PASS) + hunterSVG("ハンター")).join("");
+  return `<div class="celebrate" role="dialog" aria-modal="true" aria-label="숙제 완료">
+    <div class="rain" aria-hidden="true">${Array(7).fill(`<div class="lane">${lane}</div>`).join("")}</div>
+    <div class="cel-card">
+      ${stampHTML(s.char)}
+      ${hankoHTML()}
+      <h2>숙제 완료!</h2>
+      <p>${esc(s.title)} · ${s.target}세트 다 칠했어요</p>
+      <blockquote>“${c.cheer}” <span style="font-size:14px;opacity:.7">— ${c.name}</span></blockquote>
+      <button class="btn big" data-act="celebrate-close">좋아!</button>
+    </div>
+  </div>`;
+}
+
+/* ───────── 렌더 ───────── */
+const VIEWS = { homework: viewHomework, calendar: viewCalendar, history: viewHistory, settings: viewSettings };
+const MODALS = { song: modalSong, songForm: modalSongForm, lessonForm: modalLessonForm, logoPick: modalLogoPick };
+let shownModalKey = null;
+function render() {
+  const view = document.getElementById("view");
+  const hxVal = document.getElementById("hx-in") && document.getElementById("hx-in").value;
+  const guest = needsLogin() || (S.backend === "cloud" && S.user === undefined);
+  view.innerHTML = S.backend === "cloud" && S.user === undefined ? `<div class="loading">로그인 확인 중…</div>` : needsLogin() ? viewLogin() : VIEWS[S.tab]();
+  document.querySelector(".tabbar").hidden = guest;
+  document.body.classList.toggle("guest", guest);
+  if (S.tab === "settings" && hxVal != null) { const i = document.getElementById("hx-in"); i.value = hxVal; document.getElementById("hx-out").innerHTML = hunterSVG(hxVal); }
+  document.querySelectorAll(".tabbar button").forEach(b => { if (b.dataset.tab === S.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  // 입력 중인 폼은 다시 그리지 않는다
+  const modalEl = document.getElementById("modal");
+  const key = S.modal ? S.modal.key : null;
+  const isForm = S.modal && S.modal.type !== "song";
+  if (!(isForm && key === shownModalKey)) {
+    const scroller = modalEl.querySelector(".sheet"), top = scroller && key === shownModalKey ? scroller.scrollTop : 0;
+    modalEl.innerHTML = S.modal ? MODALS[S.modal.type](S.modal) : "";
+    const ns = modalEl.querySelector(".sheet"); if (ns && top) ns.scrollTop = top;
+    if (S.modal && key !== shownModalKey) { const f = modalEl.querySelector("input:not([type=radio]),.x"); if (f && isForm) f.focus(); }
+    shownModalKey = key;
+  }
+  document.getElementById("celebrate").innerHTML = S.celebrate ? celebrateHTML() : "";
+  const wEl = document.getElementById("welcome"), wOn = S.welcome && !guest && !S.celebrate;
+  if (wOn && !wEl.firstChild) { wEl.innerHTML = welcomeHTML(); const b = wEl.querySelector(".lic-go"); if (b) b.focus(); }
+  if (!wOn) wEl.innerHTML = "";
+  document.body.classList.toggle("lock", !!(S.modal || S.celebrate || wOn));
+  const sync = document.getElementById("sync");
+  sync.hidden = !S.backend || guest;
+  sync.className = "sync" + (S.backend === "local" ? " local" : "");
+  sync.textContent = S.backend === "cloud" ? "동기화 중" : "이 기기에만 저장";
+  const logoSrc = faceURL(logoChar()), logoEl = document.getElementById("logo");
+  if (logoEl.getAttribute("src") !== logoSrc) logoEl.src = logoSrc;
+  const sub = document.getElementById("brand-sub");
+  if (!sub.dataset.done) { sub.innerHTML = `진도 체크판 ${hunterSVG("ハンター")}`; sub.dataset.done = 1; }
+  S.justStamped = null;
+}
+function openModal(m) { S.modal = { ...m, key: uid() }; render(); }
+function closeModal() { S.modal = null; render(); }
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.innerHTML = ""; }, 2400);
+}
+
+/* ───────── 동작 ───────── */
+function stamp(id) {
+  const s = songById(id); if (!s) return;
+  const k = S.modal && S.modal.type === "song" && S.modal.id === id && S.modal.day ? S.modal.day : todayK();
+  const before = dayLogs(s, k);
+  // 오늘이면 지금 시각, 지난 날이면 그 날 저녁 시간으로 기록
+  let t = Date.now();
+  if (k !== todayK()) { const d = parseYmd(k); d.setHours(20, before.length, 0, 0); t = +d; }
+  const next = { ...s, logs: [...(s.logs || []), t].sort((a, b) => a - b) };
+  saveSong(next);
+  S.justStamped = { id, t };
+  const c = CH[s.char] || CHARS[0], n = before.length + 1;
+  if (before.length < s.target && n >= s.target) S.celebrate = id;
+  else toast(`${c.name} 색칠! ${n} / ${s.target}세트`);
+  render();
+}
+function seed() {
+  // 지난 레슨: 4일 이상 지난 가장 최근 토요일, 다음 레슨: 오늘 이후 첫 토요일
+  const t = today0(), past = new Date(t); past.setDate(t.getDate() - 4);
+  while (past.getDay() !== 6) past.setDate(past.getDate() - 1);
+  const next = new Date(t); next.setDate(t.getDate() + 1);
+  while (next.getDay() !== 6) next.setDate(next.getDate() + 1);
+  const L1 = { id: uid(), at: `${ymd(past)}T19:00`, memo: "[예시] 셔플 리듬, 루트-5도 패턴" };
+  const L2 = { id: uid(), at: `${ymd(next)}T19:00`, memo: "[예시] 숙제 점검" };
+  saveLesson(L1); saveLesson(L2);
+  // 지난 레슨 다음날부터 어제까지 하루에 perDay[i]세트, 오늘은 today세트
+  const logs = (perDay, today) => {
+    const out = [], d = new Date(past);
+    for (let i = 0; ; i++) {
+      d.setDate(d.getDate() + 1); if (d >= t) break;
+      for (let j = 0; j < perDay[i % perDay.length]; j++) { const x = new Date(d); x.setHours(20, j * 6, 0, 0); out.push(+x); }
+    }
+    for (let j = 0; j < today; j++) out.push(Date.now() - (today - j) * 360e3);
+    return out;
+  };
+  saveSong({ id: uid(), title: "[예시] 크로매틱 손풀기", memo: "메트로놈 80, 1~4번 손가락 고르게", target: 10, char: "killua", lessonId: L1.id, createdAt: Date.now(), logs: logs([10, 7, 10], 6) });
+  saveSong({ id: uid(), title: "[예시] Stand By Me 베이스라인", memo: "뮤트 신경쓰기", target: 5, char: "gon", lessonId: L1.id, createdAt: Date.now(), logs: logs([5, 3], 5) });
+  saveSong({ id: uid(), title: "[예시] Another One Bites the Dust", memo: "16분 쉼표 정확하게", target: 3, char: "hisoka", lessonId: L1.id, createdAt: Date.now(), logs: logs([2, 3], 0) });
+  saveSettings({ lastChar: "hisoka" });
+  toast("예시 숙제를 넣었어요. 제목에 [예시]가 붙어 있어요.");
+  render();
+}
+function ics(l) {
+  const at = parseAt(l.at), end = new Date(+at + 3600e3);
+  const f = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  const now = new Date(), stampUTC = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const text = s => s.replace(/[\\,;]/g, m => "\\" + m).replace(/\n/g, "\\n");
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//bass-sheet//KO", "BEGIN:VEVENT", `UID:${l.id}@bass-sheet`, `DTSTAMP:${stampUTC}`,
+    `DTSTART:${f(at)}`, `DTEND:${f(end)}`, "SUMMARY:베이스 레슨", l.memo ? `DESCRIPTION:${text(l.memo)}` : "",
+    "BEGIN:VALARM", "TRIGGER:-PT1H", "ACTION:DISPLAY", "DESCRIPTION:베이스 레슨 1시간 전", "END:VALARM", "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n");
+}
+
+const ACT = {
+  tab: t => { S.tab = t.dataset.tab; render(); window.scrollTo(0, 0); },
+  "open-song": t => openModal({ type: "song", id: t.dataset.id }),
+  stamp: t => stamp(t.dataset.id),
+  close: closeModal,
+  backdrop: (t, e) => { if (e.target === t) closeModal(); },
+  "new-song": t => openModal({ type: "songForm", lesson: t.dataset.lesson }),
+  "edit-song": t => openModal({ type: "songForm", id: t.dataset.id }),
+  "del-song": t => {
+    if (!S.modal.armed) { S.modal.armed = true; shownModalKey = null; render(); return; }
+    removeSong(t.dataset.id); S.modal = null; toast("숙제를 지웠어요."); render();
+  },
+  slot: t => {
+    const s = songById(S.modal.id);
+    if (t.dataset.t) { const v = +t.dataset.t; S.modal.editT = S.modal.editT === v ? null : v; render(); }
+    else stamp(s.id);
+  },
+  "day-move": t => {
+    const d = parseYmd(S.modal.day || todayK()); d.setDate(d.getDate() + +t.dataset.v);
+    if (d > today0()) return;
+    S.modal.day = ymd(d); S.modal.editT = null; render();
+  },
+  "day-today": () => { S.modal.day = null; S.modal.editT = null; render(); },
+  "day-pick": t => { S.modal.day = t.dataset.d === todayK() ? null : t.dataset.d; S.modal.editT = null; render(); document.querySelector(".sheet").scrollTo({ top: 0, behavior: "smooth" }); },
+  "log-cancel": () => { S.modal.editT = null; render(); },
+  "log-save": () => {
+    const s = songById(S.modal.id), v = document.getElementById("log-at").value; if (!v) return;
+    const logs = [...s.logs], i = logs.indexOf(S.modal.editT); if (i < 0) return;
+    logs[i] = +parseAt(v);
+    saveSong({ ...s, logs: logs.sort((a, b) => a - b) }); S.modal.editT = null; toast("시간을 바꿨어요."); render();
+  },
+  "log-del": () => {
+    const s = songById(S.modal.id), logs = [...s.logs], i = logs.indexOf(S.modal.editT); if (i < 0) return;
+    logs.splice(i, 1);
+    saveSong({ ...s, logs }); S.modal.editT = null; toast("색칠을 지웠어요."); render();
+  },
+  step: t => { const i = document.getElementById("f-target"); i.value = Math.min(100, Math.max(1, (+i.value || 1) + +t.dataset.v)); },
+  "new-lesson": t => openModal({ type: "lessonForm", d: t.dataset.d }),
+  "edit-lesson": t => openModal({ type: "lessonForm", id: t.dataset.id }),
+  "del-lesson": t => {
+    if (!S.modal.armed) { S.modal.armed = true; shownModalKey = null; render(); return; }
+    const id = t.dataset.id;
+    S.songs.filter(s => s.lessonId === id).forEach(s => saveSong({ ...s, lessonId: null }));
+    removeLesson(id); S.modal = null; toast("레슨을 지웠어요."); render();
+  },
+  "goto-day": t => { const d = parseYmd(t.dataset.d); S.tab = "calendar"; S.calSel = t.dataset.d; S.calMonth = new Date(d.getFullYear(), d.getMonth(), 1); render(); window.scrollTo(0, 0); },
+  "cal-day": t => { S.calSel = t.dataset.d; render(); },
+  "cal-prev": () => { S.calMonth = new Date(S.calMonth.getFullYear(), S.calMonth.getMonth() - 1, 1); render(); },
+  "cal-next": () => { S.calMonth = new Date(S.calMonth.getFullYear(), S.calMonth.getMonth() + 1, 1); render(); },
+  "cal-today": () => { const d = today0(); S.calMonth = new Date(d.getFullYear(), d.getMonth(), 1); S.calSel = ymd(d); render(); },
+  ics: t => {
+    const l = lessonById(t.dataset.id); if (!l) return;
+    const url = URL.createObjectURL(new Blob([ics(l)], { type: "text/calendar" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = `bass-lesson-${l.at.slice(0, 10)}.ics`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast("받은 파일을 열면 캘린더에 레슨이 추가돼요.");
+  },
+  "face-style": t => { faceCache.clear(); saveSettings({ faceStyle: t.dataset.v }); render(); },
+  "def-target": t => { saveSettings({ defaultTarget: Math.min(100, Math.max(1, S.settings.defaultTarget + +t.dataset.v)) }); render(); },
+  "skin-reset": t => { saveSkin(t.dataset.id, null); render(); },
+  "auth-mode": t => { S.authEmail = (document.getElementById("a-email") || {}).value || S.authEmail; S.authMode = t.dataset.v; S.authError = ""; render(); },
+  "welcome-open": () => { S.welcome = true; render(); },
+  "welcome-close": (t, e) => { if (t.classList.contains("welcome") && e.target !== t) return; S.welcome = false; render(); },
+  "auth-google": async () => {
+    if (!FB) return;
+    S.authError = ""; render();
+    try { await FB.api.signInWithPopup(FB.auth, new FB.api.GoogleAuthProvider()); }
+    catch (err) {
+      if (err && (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request")) return;
+      if (err && err.code === "auth/popup-blocked") { await FB.api.signInWithRedirect(FB.auth, new FB.api.GoogleAuthProvider()).catch(e => { S.authError = authMsg(e); render(); }); return; }
+      S.authError = authMsg(err); render();
+    }
+  },
+  "auth-reset": async () => {
+    const email = (document.getElementById("a-email") || {}).value || "";
+    S.authEmail = email;
+    if (!email) { S.authError = "비밀번호를 재설정할 이메일을 먼저 적어주세요."; render(); return; }
+    try { await FB.api.sendPasswordResetEmail(FB.auth, email); S.authError = ""; toast("비밀번호 재설정 메일을 보냈어요. 메일함을 확인해 주세요."); render(); }
+    catch (err) { S.authError = authMsg(err); render(); }
+  },
+  logout: async () => { if (FB) { await FB.api.signOut(FB.auth); S.tab = "homework"; toast("로그아웃했어요."); } },
+  "logo-pick": () => openModal({ type: "logoPick" }),
+  "logo-set": t => {
+    const id = t.dataset.id; if (!CH[id]) return;
+    saveSettings({ logoChar: id });
+    if (S.modal && S.modal.type === "logoPick") S.modal = null;
+    toast(`대표 캐릭터를 ${CH[id].name}(으)로 바꿨어요.`); render();
+  },
+  "hx-preset": t => { const i = document.getElementById("hx-in"); i.value = t.dataset.v; document.getElementById("hx-out").innerHTML = hunterSVG(t.dataset.v); },
+  seed,
+  "celebrate-close": () => { S.celebrate = null; render(); },
+};
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-act]"); if (!t) return;
+  const fn = ACT[t.dataset.act]; if (!fn) return;
+  if (t.tagName === "BUTTON" || t.dataset.act !== "backdrop") e.preventDefault();
+  fn(t, e);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && S.welcome) { S.welcome = false; render(); return; }
+  if (e.key === "Escape") { if (S.celebrate) { S.celebrate = null; render(); } else if (S.modal) closeModal(); }
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".hw[role=button]")) { e.preventDefault(); ACT["open-song"](e.target); }
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-act=day-pick]")) { e.preventDefault(); ACT["day-pick"](e.target); }
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "hx-in") document.getElementById("hx-out").innerHTML = hunterSVG(e.target.value);
+  if (e.target.id === "a-email") S.authEmail = e.target.value;
+  if (e.target.id === "a-nick") S.authNick = e.target.value;
+});
+document.addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = e.target, fd = new FormData(f);
+  if (f.dataset.form === "nick") {
+    const nickname = String(fd.get("nickname") || "").trim(); if (!nickname) return;
+    saveSettings({ nickname });
+    if (FB && S.user) { FB.api.updateProfile(S.user, { displayName: nickname }).catch(() => {}); saveProfile({ nickname }); }
+    toast(`닉네임을 ${nickname}(으)로 바꿨어요.`); render(); return;
+  }
+  if (f.dataset.form === "auth") {
+    const email = String(fd.get("email") || "").trim(), pass = String(fd.get("password") || ""), nickname = String(fd.get("nickname") || "").trim();
+    S.authEmail = email; S.authNick = nickname;
+    if (S.authMode === "signup" && !nickname) { S.authError = "닉네임을 적어주세요."; render(); return; }
+    if (!email || !pass) { S.authError = "이메일과 비밀번호를 모두 적어주세요."; render(); return; }
+    S.authBusy = true; S.authError = ""; render();
+    try {
+      if (S.authMode === "signup") {
+        const cred = await FB.api.createUserWithEmailAndPassword(FB.auth, email, pass);
+        await FB.api.updateProfile(cred.user, { displayName: nickname }).catch(() => {});
+        const me = ["users", cred.user.uid];
+        await FB.api.setDoc(FB.api.doc(FB.fs, ...me, "settings", "main"), { nickname }, { merge: true });
+        await FB.api.setDoc(FB.api.doc(FB.fs, ...me, "profile", "main"), { nickname, email, joinedAt: new Date().toISOString() }, { merge: true });
+      } else await FB.api.signInWithEmailAndPassword(FB.auth, email, pass);
+    } catch (err) { S.authBusy = false; S.authError = authMsg(err); render(); }
+    return;
+  }
+  if (f.dataset.form === "song") {
+    const title = String(fd.get("title") || "").trim(); if (!title) return;
+    const base = S.modal.id ? songById(S.modal.id) : { id: uid(), createdAt: Date.now(), logs: [] };
+    const song = { ...base, title, memo: String(fd.get("memo") || "").trim(), lessonId: fd.get("lesson") || null,
+      target: Math.min(100, Math.max(1, parseInt(fd.get("target"), 10) || 10)), char: fd.get("char") || "gon" };
+    saveSong(song);
+    if (!S.modal.id) saveSettings({ lastChar: song.char });
+    const wasNew = !S.modal.id;
+    S.modal = wasNew ? null : { type: "song", id: song.id, key: uid() };
+    toast(wasNew ? "숙제를 추가했어요." : "숙제를 고쳤어요.");
+    render();
+  }
+  if (f.dataset.form === "lesson") {
+    const date = fd.get("date"), time = fd.get("time") || "19:00"; if (!date) return;
+    const l = { ...(S.modal.id ? lessonById(S.modal.id) : { id: uid() }), at: `${date}T${time}`, memo: String(fd.get("memo") || "").trim() };
+    // 같은 날 레슨은 하나만
+    const clash = S.lessons.find(x => x.id !== l.id && x.at.slice(0, 10) === date);
+    if (clash) { toast("그 날에는 이미 레슨이 있어요. 기존 레슨을 수정해 주세요."); return; }
+    saveLesson(l);
+    if (time !== S.settings.lessonTime) saveSettings({ lessonTime: time });
+    S.modal = null; S.calSel = date;
+    const d = parseYmd(date); S.calMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+    toast("레슨을 저장했어요."); render();
+  }
+});
+document.addEventListener("change", async e => {
+  const input = e.target; if (!input.dataset || !input.dataset.skin) return;
+  const file = input.files && input.files[0]; if (!file) return;
+  const chId = input.dataset.skin;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 320 / Math.max(bmp.width, bmp.height));
+    const cv = document.createElement("canvas"); cv.width = Math.round(bmp.width * scale); cv.height = Math.round(bmp.height * scale);
+    cv.getContext("2d").drawImage(bmp, 0, 0, cv.width, cv.height);
+    // 문서 하나가 1MB를 넘지 않도록 작게 저장 (투명 배경이면 PNG, 너무 크면 JPEG)
+    let data = cv.toDataURL("image/png");
+    if (data.length > 600000) data = cv.toDataURL("image/jpeg", .85);
+    saveSkin(chId, data);
+    toast(`${CH[chId].name} 도장을 바꿨어요.`); render();
+  } catch (err) {
+    toast("이미지를 읽지 못했어요. 다른 사진으로 해보세요.");
+  }
+});
+
+boot();
+})();
+</script>
+</body>
+</html>

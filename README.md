@@ -1,0 +1,120 @@
+# 진도 체크판 사이트 여는 방법
+
+> **GitHub Pages로 올려둔 경우** (저장소: https://github.com/iamhiki/jindo-check)
+> 사이트 주소는 **https://iamhiki.github.io/jindo-check/** 예요. 아래 1~3단계(Firebase 만들기)만 하고,
+> - 4단계: `firebase-config.js`는 GitHub 저장소 화면에서 파일을 열고 연필(✏️) 버튼 → 값 붙여넣기 → **Commit changes**로 저장해요. 1~2분 뒤 사이트에 반영돼요.
+> - 5단계(Netlify)는 건너뛰어요.
+> - 6단계: 승인된 도메인에 `iamhiki.github.io` 를 추가해요.
+
+다 하면 `https://내사이트.netlify.app` 같은 주소가 생겨요. 친구들은 그 주소로 들어와서 각자 회원가입하고, 자기 기록만 보고 쓰게 돼요.
+돈은 들지 않아요. Firebase 무료 요금제(Spark)와 Netlify 무료 요금제로 충분해요.
+
+준비물: 구글 계정, 이 폴더(`site`)
+
+---
+
+## 1. Firebase 프로젝트 만들기
+
+1. https://console.firebase.google.com 에 구글 계정으로 들어가요.
+2. **프로젝트 만들기** → 이름(예: `bass-check`) 입력 → Google 애널리틱스는 **꺼도 돼요** → 만들기.
+
+## 2. 로그인 방법 켜기
+
+1. 왼쪽 메뉴 **빌드 → Authentication** → **시작하기**.
+2. **로그인 방법** 탭에서
+   - **이메일/비밀번호** → 사용 설정 → 저장
+   - **Google** → 사용 설정 → 프로젝트 지원 이메일 선택 → 저장
+
+## 3. 데이터베이스 만들기
+
+1. 왼쪽 메뉴 **빌드 → Firestore Database** → **데이터베이스 만들기**.
+2. 위치는 **asia-northeast3 (서울)** 추천 → **프로덕션 모드**로 시작.
+3. 만들어지면 **규칙** 탭을 눌러서, 안에 있는 내용을 전부 지우고 이 폴더의 `firestore.rules` 내용을 붙여넣은 뒤 **게시**.
+   - 이 규칙 덕분에 각자 자기 기록만 읽고 쓸 수 있어요. 꼭 해주세요.
+
+## 4. 사이트에 Firebase 연결하기
+
+1. 왼쪽 위 **톱니바퀴 → 프로젝트 설정** → 아래쪽 **내 앱**에서 웹 아이콘 **`</>`** 클릭.
+2. 앱 닉네임(예: `진도 체크판`) 입력 → **앱 등록** (Firebase 호스팅 체크는 안 해도 돼요).
+3. 화면에 나오는 `firebaseConfig = { apiKey: "...", ... }` 값을 복사해요.
+4. 이 폴더의 `firebase-config.js`를 메모장/텍스트편집기로 열고, 따옴표 안에 각 값을 붙여넣고 저장해요.
+
+```js
+window.FIREBASE_CONFIG = {
+  apiKey: "AIza....",
+  authDomain: "bass-check.firebaseapp.com",
+  projectId: "bass-check",
+  storageBucket: "bass-check.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef",
+};
+```
+
+> apiKey는 비밀번호가 아니에요. 어느 프로젝트인지 알려주는 값이라 사이트에 들어가 있어도 괜찮아요. 기록은 3단계의 규칙이 지켜줘요.
+
+## 5. 사이트 올리기 (Netlify Drop, 제일 쉬운 방법)
+
+1. https://app.netlify.com/drop 에 들어가서 가입(구글 계정 가능).
+2. `site` 폴더를 통째로 화면에 **끌어다 놓기**.
+3. 잠깐 기다리면 `https://어쩌구.netlify.app` 주소가 생겨요.
+   - **Site configuration → Change site name**에서 주소 앞부분을 원하는 이름으로 바꿀 수 있어요.
+4. 나중에 파일을 고치면 **Deploys** 탭에서 폴더를 다시 끌어다 놓으면 업데이트돼요.
+
+## 6. 사이트 주소를 Firebase에 등록하기 (안 하면 로그인이 막혀요)
+
+1. Firebase 콘솔 → **Authentication → 설정 → 승인된 도메인** → **도메인 추가**.
+2. 5단계에서 받은 주소를 `https://` 없이 넣어요. 예: `bass-check.netlify.app`
+
+## 7. 휴대폰에서 앱처럼 쓰기
+
+- **아이폰·아이패드**: 사파리로 사이트 열기 → 공유 버튼 → **홈 화면에 추가**
+- **안드로이드**: 크롬으로 열기 → 메뉴(⋮) → **홈 화면에 추가**
+
+처음 한 번 닉네임을 정해 회원가입(또는 Google 로그인)하면, 같은 계정으로 들어간 기기끼리 기록이 맞춰져요. 하루에 한 번 헌터 라이선스 모양 환영 카드가 떠요.
+
+---
+
+## 고친 버전을 다시 올리기 (업데이트)
+
+새 압축 파일을 받을 때마다 이렇게 해요.
+
+1. 새 압축을 풀어요.
+2. **중요:** 예전 폴더에 있던 **내 `firebase-config.js`** 를 새 폴더에 덮어써요.
+   새 압축 안의 `firebase-config.js` 는 빈칸이라서, 그대로 올리면 로그인이 사라지고 "이 기기에만 저장" 모드가 돼요.
+   (`firestore.rules` 가 바뀌었다고 안내받은 경우에만 3단계처럼 규칙도 다시 붙여넣어요.)
+3. Netlify에 들어가서 내 사이트 → **Deploys** 탭 → 아래쪽 "Drag and drop your site output folder here" 칸에 새 `site` 폴더를 끌어다 놓아요.
+4. 1분쯤 뒤 사이트를 새로고침하면 바뀐 버전이 나와요. 휴대폰 홈 화면 앱은 한 번 껐다 켜면 돼요.
+
+기록(숙제, 색칠)은 Firebase에 있어서 다시 올려도 그대로 남아요.
+
+## 회원 목록 보기
+
+- **가입한 계정**: Firebase 콘솔 → Authentication → **사용자** 탭 (이메일, 가입일, 마지막 로그인)
+- **닉네임 등 회원 정보**: Firebase 콘솔 → Firestore Database → `users` → (사람별 ID) → `profile` → `main`
+  - `nickname`(닉네임), `email`, `joinedAt`(가입일), `lastSeen`(마지막으로 들어온 날)
+- 비밀번호는 Firebase가 암호화해서 보관하기 때문에 관리자도 볼 수 없어요. 잊어버린 사람은 로그인 화면의 "비밀번호를 잊었어요"로 재설정 메일을 받으면 돼요.
+
+---
+
+## 다른 방법: Firebase Hosting으로 올리기 (명령어에 익숙하면)
+
+Netlify 대신 Firebase에 같이 올릴 수도 있어요. 이 경우 6단계는 자동으로 돼요.
+
+```bash
+npm install -g firebase-tools
+firebase login
+cd site
+firebase use --add        # 1단계에서 만든 프로젝트 선택
+firebase deploy           # 사이트와 firestore.rules가 같이 올라가요
+```
+
+주소는 `https://프로젝트이름.web.app` 이 돼요.
+
+---
+
+## 알아두면 좋은 것
+
+- **무료 한도**: Firestore 무료 요금제는 하루 읽기 5만 번, 쓰기 2만 번이에요. 친구 여럿이 매일 써도 넉넉해요.
+- **내 이미지로 바꾸기**: 올린 사진은 작게 줄여서 각자 계정에 저장돼요.
+- **로그인 없이 써보기**: `firebase-config.js`를 비워두면 로그인 없이 그 기기에만 저장하는 모드로 동작해요.
+- **저작권**: 캐릭터는 헌터×헌터를 따라 그린 팬아트예요. 친구끼리 쓰는 건 괜찮지만, 사이트를 널리 공개하거나 돈을 받으면 문제가 될 수 있어요. 그럴 땐 캐릭터를 오리지널로 바꾸는 게 안전해요.
