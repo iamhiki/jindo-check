@@ -342,6 +342,18 @@ body.guest { padding-bottom: 32px; }
 .lic-quote { position: relative; margin: 8px 18px 0; font-size: 14px; color: #D9D1B3; }
 .lic-jp { position: relative; display: flex; align-items: center; gap: 8px; margin: 12px 18px 0; font-size: 12px; color: #BFB48E; }
 .lic-jp .hx { height: 16px; color: #E7C766; }
+.exam .license { max-height: calc(100vh - 32px); overflow: auto; }
+.exam .lic-top b { letter-spacing: .1em; }
+.exam .lic-top { padding-right: 58px; }
+.exam-form { position: relative; display: grid; gap: 10px; padding: 14px 18px 0; }
+.exam-form .field > span { color: #BFB48E; font-size: 12px; letter-spacing: .04em; }
+.exam-form .input { background: #F3EEDC; border-color: #C9A042; color: #16211A; }
+.exam-form .autherr { color: #FF8A8A; }
+.exam-lead { position: relative; margin: 12px 18px 0; font-size: 14px; color: #D9D1B3; }
+.exam-alt { position: relative; display: grid; gap: 8px; padding: 0 18px 16px; }
+.exam-alt .btn { width: 100%; justify-content: center; background: transparent; color: #F3EEDC; border-color: #C9A04288; }
+.exam-alt .linkbtn { color: #E7C766; }
+.exam .x { position: absolute; right: 12px; top: 10px; z-index: 2; background: #16211A; color: #F3EEDC; border-color: #C9A04288; }
 .lic-go { position: relative; margin: 16px 18px 18px; width: calc(100% - 36px); justify-content: center; background: #E7C766; border: 0; color: #16211A; font-size: 16px; padding: 13px; border-radius: 14px; font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -368,6 +380,7 @@ body.guest { padding-bottom: 32px; }
 <div id="modal"></div>
 <div id="celebrate"></div>
 <div id="welcome"></div>
+<div id="signup"></div>
 <div id="toast"></div>
 
 <div class="tabbar">
@@ -701,7 +714,7 @@ const S = {
   songs: [], lessons: [], settings: { ...DEFAULT_SETTINGS }, skins: {},
   loaded: { songs: false, lessons: false }, backend: null,
   user: undefined, // undefined = 확인 중, null = 로그아웃
-  authMode: "login", authError: "", authEmail: "", authNick: "", authInvite: "", authBusy: false, member: undefined, welcome: false, settingsLoaded: false,
+  authMode: "login", authError: "", authEmail: "", authNick: "", authInvite: "", authBusy: false, member: undefined, signupPop: false, welcome: false, settingsLoaded: false,
   tab: "homework", modal: null, celebrate: null, justStamped: null,
   calMonth: (() => { const d = today0(); d.setDate(1); return d; })(), calSel: null,
 };
@@ -763,7 +776,12 @@ async function boot() {
     auth.languageCode = "ko";
     FB = { fs, auth, api: { ...fsM, ...authM } };
     S.backend = "cloud";
-    authM.onAuthStateChanged(auth, user => { S.user = user; S.authBusy = false; subscribe(); render(); });
+    authM.onAuthStateChanged(auth, user => {
+      S.user = user; S.authBusy = false;
+      if (!user) { let seen = null; try { seen = localStorage.getItem(POP_KEY); } catch (e) {} if (!seen) { S.signupPop = true; S.authMode = "signup"; } }
+      else S.signupPop = false;
+      subscribe(); render();
+    });
   } catch (e) {
     startLocal();
     toast("서버에 연결하지 못해서 이 기기에만 저장해요.");
@@ -889,6 +907,32 @@ function welcomeHTML() {
     </div>
   </div>`;
 }
+
+/* ───────── 처음 온 사람: 가입 팝업 (헌터 시험 응시 원서) ───────── */
+const POP_KEY = "signup-popup-seen";
+function signupPopHTML() {
+  return `<div class="welcome exam" role="dialog" aria-modal="true" aria-label="회원가입">
+    <form class="license" data-form="auth" data-pop="1" novalidate>
+      <button type="button" class="x" data-act="pop-close" aria-label="닫기">✕</button>
+      <div class="lic-top"><b>HUNTER EXAM · 응시 원서</b>${hunterSVG("ハンター")}</div>
+      <p class="lic-hi">처음 오셨군요!<br>응시 원서를 내고 연습을 시작해요</p>
+      <p class="exam-lead">링크를 보내준 사람에게 받은 초대 코드가 있어야 가입할 수 있어요.</p>
+      <div class="exam-form">
+        <label class="field"><span>초대 코드</span><input class="input" id="p-invite" name="invite" autocomplete="off" autocapitalize="off" spellcheck="false" required value="${esc(S.authInvite)}"></label>
+        <label class="field"><span>닉네임</span><input class="input" id="p-nick" name="nickname" maxlength="20" autocomplete="nickname" required placeholder="예: 베이스 곤" value="${esc(S.authNick)}"></label>
+        <label class="field"><span>이메일</span><input class="input" id="p-email" name="email" type="email" inputmode="email" autocomplete="email" required value="${esc(S.authEmail)}"></label>
+        <label class="field"><span>비밀번호 (6자 이상)</span><input class="input" id="p-pass" name="password" type="password" autocomplete="new-password" minlength="6" required></label>
+        <p class="autherr" role="alert">${esc(S.authError)}</p>
+      </div>
+      <button class="btn lic-go" type="submit" style="margin-top:4px" ${S.authBusy ? "disabled" : ""}>${S.authBusy ? "접수하는 중…" : "응시하기 (가입하고 시작)"}</button>
+      <div class="exam-alt">
+        <button type="button" class="btn" data-act="auth-google">Google 계정으로 가입</button>
+        <button type="button" class="linkbtn" data-act="pop-login">이미 가입했어요 · 로그인하기</button>
+      </div>
+    </form>
+  </div>`;
+}
+function closeSignupPop() { S.signupPop = false; try { localStorage.setItem(POP_KEY, "1"); } catch (e) {} }
 
 /* ───────── 로그인 ───────── */
 const AUTH_MSG = {
@@ -1306,7 +1350,14 @@ function render() {
   const wEl = document.getElementById("welcome"), wOn = S.welcome && !guest && !S.celebrate;
   if (wOn && !wEl.firstChild) { wEl.innerHTML = welcomeHTML(); const b = wEl.querySelector(".lic-go"); if (b) b.focus(); }
   if (!wOn) wEl.innerHTML = "";
-  document.body.classList.toggle("lock", !!(S.modal || S.celebrate || wOn));
+  const pEl = document.getElementById("signup"), pOn = S.signupPop && needsLogin();
+  const pKey = `${S.authBusy}|${S.authError}`;
+  if (pOn && (!pEl.firstChild || pEl.dataset.k !== pKey)) {
+    pEl.innerHTML = signupPopHTML(); pEl.dataset.k = pKey;
+    if (!S.authBusy) { const f = pEl.querySelector(S.authError ? "#p-pass" : "#p-invite"); if (f) f.focus(); }
+  }
+  if (!pOn && pEl.firstChild) { pEl.innerHTML = ""; pEl.dataset.k = ""; }
+  document.body.classList.toggle("lock", !!(S.modal || S.celebrate || wOn || pOn));
   const sync = document.getElementById("sync");
   sync.hidden = !S.backend || guest;
   sync.className = "sync" + (S.backend === "local" ? " local" : "");
@@ -1443,6 +1494,8 @@ const ACT = {
   "skin-reset": t => { saveSkin(t.dataset.id, null); render(); },
   "auth-mode": t => { S.authEmail = (document.getElementById("a-email") || {}).value || S.authEmail; S.authMode = t.dataset.v; S.authError = ""; render(); },
   // (닉네임·초대 코드 입력값은 input 이벤트에서 S에 보관돼요)
+  "pop-close": () => { closeSignupPop(); S.authError = ""; render(); },
+  "pop-login": () => { closeSignupPop(); S.authMode = "login"; S.authError = ""; render(); },
   "welcome-open": () => { S.welcome = true; render(); },
   "welcome-close": (t, e) => { if (t.classList.contains("welcome") && e.target !== t) return; S.welcome = false; render(); },
   "auth-google": async () => {
@@ -1482,6 +1535,7 @@ document.addEventListener("click", e => {
   fn(t, e);
 });
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && S.signupPop) { closeSignupPop(); render(); return; }
   if (e.key === "Escape" && S.welcome) { S.welcome = false; render(); return; }
   if (e.key === "Escape") { if (S.celebrate) { S.celebrate = null; render(); } else if (S.modal) closeModal(); }
   if ((e.key === "Enter" || e.key === " ") && e.target.matches(".hw[role=button]")) { e.preventDefault(); ACT["open-song"](e.target); }
@@ -1489,7 +1543,9 @@ document.addEventListener("keydown", e => {
 });
 document.addEventListener("input", e => {
   if (e.target.id === "hx-in") document.getElementById("hx-out").innerHTML = hunterSVG(e.target.value);
-  if (e.target.id === "a-email") S.authEmail = e.target.value;
+  if (e.target.id === "a-email" || e.target.id === "p-email") S.authEmail = e.target.value;
+  if (e.target.id === "p-nick") S.authNick = e.target.value;
+  if (e.target.id === "p-invite") S.authInvite = e.target.value;
   if (e.target.id === "a-nick") S.authNick = e.target.value;
   if (e.target.id === "a-invite" || e.target.id === "i-code") S.authInvite = e.target.value;
 });
@@ -1511,6 +1567,7 @@ document.addEventListener("submit", async e => {
     if (FB && S.user) { FB.api.updateProfile(S.user, { displayName: nickname }).catch(() => {}); saveProfile({ nickname }); }
     toast(`닉네임을 ${nickname}(으)로 바꿨어요.`); render(); return;
   }
+  if (f.dataset.form === "auth" && f.dataset.pop) S.authMode = "signup";
   if (f.dataset.form === "auth") {
     const email = String(fd.get("email") || "").trim(), pass = String(fd.get("password") || ""), nickname = String(fd.get("nickname") || "").trim();
     const invite = String(fd.get("invite") || "").trim();
