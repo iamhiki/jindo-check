@@ -1,9 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 로그인한 사람은 users/<자기 uid>/ 아래 기록만 읽고 쓸 수 있어요.
+
+    // 초대 코드 목록: 앱에서는 읽거나 쓸 수 없어요. Firebase 콘솔에서만 관리해요.
+    // 문서 ID가 곧 초대 코드예요. (예: invites/hunter2026)
+    match /invites/{code} {
+      allow read, write: if false;
+    }
+
+    // 가입 확인: 맞는 초대 코드를 넣은 사람만 자기 문서를 만들 수 있어요.
+    match /members/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['code', 'joinedAt'])
+        && request.resource.data.code is string
+        && exists(/databases/$(database)/documents/invites/$(request.resource.data.code));
+    }
+
+    // 기록: 가입이 확인된 본인만 users/<자기 uid>/ 아래를 읽고 쓸 수 있어요.
     match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/members/$(uid));
     }
   }
 }

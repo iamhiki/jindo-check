@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="theme-color" content="#2E8B4E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -700,7 +701,7 @@ const S = {
   songs: [], lessons: [], settings: { ...DEFAULT_SETTINGS }, skins: {},
   loaded: { songs: false, lessons: false }, backend: null,
   user: undefined, // undefined = 확인 중, null = 로그아웃
-  authMode: "login", authError: "", authEmail: "", authNick: "", authBusy: false, welcome: false, settingsLoaded: false,
+  authMode: "login", authError: "", authEmail: "", authNick: "", authInvite: "", authBusy: false, member: undefined, welcome: false, settingsLoaded: false,
   tab: "homework", modal: null, celebrate: null, justStamped: null,
   calMonth: (() => { const d = today0(); d.setDate(1); return d; })(), calSel: null,
 };
@@ -769,11 +770,22 @@ async function boot() {
   }
 }
 function startLocal() { S.backend = "local"; S.user = null; loadLocal(); S.loaded = { songs: true, lessons: true }; render(); }
+let dataOn = false;
 function subscribe() {
-  unsubs.forEach(u => u()); unsubs = [];
+  unsubs.forEach(u => u()); unsubs = []; dataOn = false;
   S.songs = []; S.lessons = []; S.skins = {}; S.settings = { ...DEFAULT_SETTINGS };
   S.loaded = { songs: false, lessons: false }; S.settingsLoaded = false; S.modal = null; S.celebrate = null; S.welcome = false; faceCache.clear();
+  S.member = undefined;
   if (!S.user) return;
+  // 초대 코드로 가입이 확인된 사람만 members/<uid> 문서가 있어요 (firestore.rules 참고)
+  unsubs.push(FB.api.onSnapshot(FB.api.doc(FB.fs, "members", S.user.uid), snap => {
+    if (!snap.exists() && snap.metadata.fromCache) return; // 서버 확인 전에는 기다림
+    S.member = snap.exists();
+    if (S.member && !dataOn) { dataOn = true; subscribeData(); }
+    render();
+  }, () => { S.member = false; render(); }));
+}
+function subscribeData() {
   const { collection, doc, onSnapshot } = FB.api, me = ["users", S.user.uid];
   unsubs.push(onSnapshot(collection(FB.fs, ...me, "songs"), snap => {
     S.songs = snap.docs.map(d => ({ id: d.id, logs: [], ...d.data() }));
@@ -794,6 +806,26 @@ function subscribe() {
     S.skins = Object.fromEntries(snap.docs.map(d => [d.id, d.data().data]).filter(([, v]) => typeof v === "string" && v.startsWith("data:image/")));
     render();
   }, onDbError));
+}
+/* 초대 코드 확인: invites/<코드> 문서가 있을 때만 규칙이 members/<uid> 생성을 허락해요 */
+function joinWithCode(user, code) {
+  return FB.api.setDoc(FB.api.doc(FB.fs, "members", user.uid), { code, joinedAt: new Date().toISOString() });
+}
+const inviteMsg = err => err && err.code === "permission-denied"
+  ? "초대 코드가 맞지 않아요. 링크를 보내준 사람에게 다시 확인해 주세요."
+  : "초대 코드를 확인하지 못했어요. 인터넷 연결을 확인해 주세요.";
+function viewInvite() {
+  return `<section class="login">
+    <div class="lineup">${CHARS.map(c => stampHTML(c.id)).join("")}</div>
+    <h2>초대 코드를 넣어주세요</h2>
+    <p>진도 체크판은 초대받은 사람만 쓸 수 있어요. 링크를 보내준 사람에게 초대 코드를 받아 적어주세요.</p>
+    <form class="panel form" data-form="invite" novalidate>
+      <label class="field"><span>초대 코드</span><input class="input" id="i-code" name="code" autocomplete="off" autocapitalize="off" spellcheck="false" required value="${esc(S.authInvite)}"></label>
+      <p class="autherr" role="alert">${esc(S.authError)}</p>
+      <button class="btn primary big" type="submit" ${S.authBusy ? "disabled" : ""}>${S.authBusy ? "확인하는 중…" : "확인"}</button>
+    </form>
+    <button class="linkbtn" data-act="logout">다른 계정으로 로그인</button>
+  </section>`;
 }
 function onDbError(err) {
   if (err && err.code === "permission-denied") toast("기록을 볼 권한이 없어요. Firestore 규칙을 확인해 주세요.");
@@ -883,6 +915,7 @@ function viewLogin() {
         <button type="button" data-act="auth-mode" data-v="login" aria-pressed="${!signup}">로그인</button>
         <button type="button" data-act="auth-mode" data-v="signup" aria-pressed="${signup}">회원가입</button>
       </div>
+      ${signup ? `<label class="field"><span>초대 코드</span><input class="input" id="a-invite" name="invite" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="링크를 보내준 사람에게 받은 코드" value="${esc(S.authInvite)}"></label>` : ""}
       ${signup ? `<label class="field"><span>닉네임</span><input class="input" id="a-nick" name="nickname" maxlength="20" autocomplete="nickname" required placeholder="예: 베이스 곤" value="${esc(S.authNick)}"></label>` : ""}
       <label class="field"><span>이메일</span><input class="input" id="a-email" name="email" type="email" autocomplete="email" inputmode="email" required value="${esc(S.authEmail)}"></label>
       <label class="field"><span>비밀번호${signup ? " (6자 이상)" : ""}</span><input class="input" id="a-pass" name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" minlength="6" required></label>
@@ -1250,8 +1283,10 @@ let shownModalKey = null;
 function render() {
   const view = document.getElementById("view");
   const hxVal = document.getElementById("hx-in") && document.getElementById("hx-in").value;
-  const guest = needsLogin() || (S.backend === "cloud" && S.user === undefined);
-  view.innerHTML = S.backend === "cloud" && S.user === undefined ? `<div class="loading">로그인 확인 중…</div>` : needsLogin() ? viewLogin() : VIEWS[S.tab]();
+  const checking = S.backend === "cloud" && (S.user === undefined || (S.user && S.member === undefined));
+  const inviting = S.backend === "cloud" && !!S.user && S.member === false;
+  const guest = needsLogin() || checking || inviting;
+  view.innerHTML = checking ? `<div class="loading">로그인 확인 중…</div>` : needsLogin() ? viewLogin() : inviting ? viewInvite() : VIEWS[S.tab]();
   document.querySelector(".tabbar").hidden = guest;
   document.body.classList.toggle("guest", guest);
   if (S.tab === "settings" && hxVal != null) { const i = document.getElementById("hx-in"); i.value = hxVal; document.getElementById("hx-out").innerHTML = hunterSVG(hxVal); }
@@ -1407,6 +1442,7 @@ const ACT = {
   "def-target": t => { saveSettings({ defaultTarget: Math.min(100, Math.max(1, S.settings.defaultTarget + +t.dataset.v)) }); render(); },
   "skin-reset": t => { saveSkin(t.dataset.id, null); render(); },
   "auth-mode": t => { S.authEmail = (document.getElementById("a-email") || {}).value || S.authEmail; S.authMode = t.dataset.v; S.authError = ""; render(); },
+  // (닉네임·초대 코드 입력값은 input 이벤트에서 S에 보관돼요)
   "welcome-open": () => { S.welcome = true; render(); },
   "welcome-close": (t, e) => { if (t.classList.contains("welcome") && e.target !== t) return; S.welcome = false; render(); },
   "auth-google": async () => {
@@ -1426,7 +1462,7 @@ const ACT = {
     try { await FB.api.sendPasswordResetEmail(FB.auth, email); S.authError = ""; toast("비밀번호 재설정 메일을 보냈어요. 메일함을 확인해 주세요."); render(); }
     catch (err) { S.authError = authMsg(err); render(); }
   },
-  logout: async () => { if (FB) { await FB.api.signOut(FB.auth); S.tab = "homework"; toast("로그아웃했어요."); } },
+  logout: async () => { if (FB) { S.authError = ""; S.authInvite = ""; await FB.api.signOut(FB.auth); S.tab = "homework"; toast("로그아웃했어요."); } },
   "logo-pick": () => openModal({ type: "logoPick" }),
   "logo-set": t => {
     const id = t.dataset.id; if (!CH[id]) return;
@@ -1455,10 +1491,20 @@ document.addEventListener("input", e => {
   if (e.target.id === "hx-in") document.getElementById("hx-out").innerHTML = hunterSVG(e.target.value);
   if (e.target.id === "a-email") S.authEmail = e.target.value;
   if (e.target.id === "a-nick") S.authNick = e.target.value;
+  if (e.target.id === "a-invite" || e.target.id === "i-code") S.authInvite = e.target.value;
 });
 document.addEventListener("submit", async e => {
   e.preventDefault();
   const f = e.target, fd = new FormData(f);
+  if (f.dataset.form === "invite") {
+    const code = String(fd.get("code") || "").trim();
+    S.authInvite = code;
+    if (!code || code.includes("/")) { S.authError = "초대 코드를 적어주세요."; render(); return; }
+    S.authBusy = true; S.authError = ""; render();
+    try { await joinWithCode(S.user, code); S.authBusy = false; S.authError = ""; S.authInvite = ""; }
+    catch (err) { S.authBusy = false; S.authError = inviteMsg(err); render(); }
+    return;
+  }
   if (f.dataset.form === "nick") {
     const nickname = String(fd.get("nickname") || "").trim(); if (!nickname) return;
     saveSettings({ nickname });
@@ -1467,13 +1513,21 @@ document.addEventListener("submit", async e => {
   }
   if (f.dataset.form === "auth") {
     const email = String(fd.get("email") || "").trim(), pass = String(fd.get("password") || ""), nickname = String(fd.get("nickname") || "").trim();
-    S.authEmail = email; S.authNick = nickname;
+    const invite = String(fd.get("invite") || "").trim();
+    S.authEmail = email; S.authNick = nickname; S.authInvite = invite;
+    if (S.authMode === "signup" && (!invite || invite.includes("/"))) { S.authError = "초대 코드를 적어주세요."; render(); return; }
     if (S.authMode === "signup" && !nickname) { S.authError = "닉네임을 적어주세요."; render(); return; }
     if (!email || !pass) { S.authError = "이메일과 비밀번호를 모두 적어주세요."; render(); return; }
     S.authBusy = true; S.authError = ""; render();
     try {
       if (S.authMode === "signup") {
         const cred = await FB.api.createUserWithEmailAndPassword(FB.auth, email, pass);
+        try { await joinWithCode(cred.user, invite); }
+        catch (err) {
+          S.authBusy = false; S.authError = inviteMsg(err);
+          await FB.api.deleteUser(cred.user).catch(() => FB.api.signOut(FB.auth));
+          render(); return;
+        }
         await FB.api.updateProfile(cred.user, { displayName: nickname }).catch(() => {});
         const me = ["users", cred.user.uid];
         await FB.api.setDoc(FB.api.doc(FB.fs, ...me, "settings", "main"), { nickname }, { merge: true });
