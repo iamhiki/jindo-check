@@ -801,42 +801,58 @@ async function boot() {
   }
 }
 function startLocal() { S.backend = "local"; S.user = null; loadLocal(); S.loaded = { songs: true, lessons: true }; render(); }
-let dataOn = false;
+let dataOn = false, dataTries = 0, dataUnsubs = [], loadTimer = null;
 function subscribe() {
   unsubs.forEach(u => u()); unsubs = []; dataOn = false;
+  dataUnsubs.forEach(u => u()); dataUnsubs = []; clearTimeout(loadTimer); S.slowLoad = false;
   S.songs = []; S.lessons = []; S.skins = {}; S.settings = { ...DEFAULT_SETTINGS };
   S.loaded = { songs: false, lessons: false }; S.settingsLoaded = false; S.modal = null; S.celebrate = null; S.welcome = false; faceCache.clear();
   S.member = undefined;
   if (!S.user) return;
   // 초대 코드로 가입이 확인된 사람만 members/<uid> 문서가 있어요 (firestore.rules 참고)
-  unsubs.push(FB.api.onSnapshot(FB.api.doc(FB.fs, "members", S.user.uid), snap => {
+  unsubs.push(FB.api.onSnapshot(FB.api.doc(FB.fs, "members", S.user.uid), { includeMetadataChanges: true }, snap => {
     if (!snap.exists() && snap.metadata.fromCache) return; // 서버 확인 전에는 기다림
     S.member = snap.exists();
-    if (S.member && !dataOn) { dataOn = true; subscribeData(); }
+    // 방금 가입한 경우 이 문서가 아직 서버에 저장되기 전일 수 있어요. 서버 저장이 끝난 뒤에 기록을 불러와요.
+    if (S.member && !dataOn && !snap.metadata.hasPendingWrites) { dataOn = true; dataTries = 0; subscribeData(); }
     render();
   }, () => { S.member = false; render(); }));
 }
 function subscribeData() {
   const { collection, doc, onSnapshot } = FB.api, me = ["users", S.user.uid];
-  unsubs.push(onSnapshot(collection(FB.fs, ...me, "songs"), snap => {
+  dataUnsubs.forEach(u => u()); dataUnsubs = [];
+  clearTimeout(loadTimer);
+  loadTimer = setTimeout(() => { if (!S.loaded.songs || !S.loaded.lessons) { S.slowLoad = true; render(); } }, 12000);
+  const onErr = err => dataError(err);
+  dataUnsubs.push(onSnapshot(collection(FB.fs, ...me, "songs"), snap => {
     S.songs = snap.docs.map(d => ({ id: d.id, logs: [], ...d.data() }));
-    S.loaded.songs = true;
+    S.loaded.songs = true; if (S.loaded.lessons) { S.slowLoad = false; clearTimeout(loadTimer); }
     if (S.modal && S.modal.type === "song" && !songById(S.modal.id)) S.modal = null;
     maybeWelcome(); render();
-  }, onDbError));
-  unsubs.push(onSnapshot(collection(FB.fs, ...me, "lessons"), snap => {
+  }, onErr));
+  dataUnsubs.push(onSnapshot(collection(FB.fs, ...me, "lessons"), snap => {
     S.lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    S.loaded.lessons = true; render();
-  }, onDbError));
-  unsubs.push(onSnapshot(doc(FB.fs, ...me, "settings", "main"), snap => {
+    S.loaded.lessons = true; if (S.loaded.songs) { S.slowLoad = false; clearTimeout(loadTimer); } render();
+  }, onErr));
+  dataUnsubs.push(onSnapshot(doc(FB.fs, ...me, "settings", "main"), snap => {
     const next = { ...DEFAULT_SETTINGS, ...(snap.exists() ? snap.data() : {}) };
     if (next.faceStyle !== S.settings.faceStyle) faceCache.clear();
     S.settings = next; S.settingsLoaded = true; maybeWelcome(); render();
-  }, onDbError));
-  unsubs.push(onSnapshot(collection(FB.fs, ...me, "skins"), snap => {
+  }, onErr));
+  dataUnsubs.push(onSnapshot(collection(FB.fs, ...me, "skins"), snap => {
     S.skins = Object.fromEntries(snap.docs.map(d => [d.id, d.data().data]).filter(([, v]) => typeof v === "string" && v.startsWith("data:image/")));
     render();
-  }, onDbError));
+  }, onErr));
+}
+/* 가입 직후처럼 권한 확인이 늦게 반영되면 잠깐 뒤 다시 불러와요 */
+let retryTimer = null;
+function dataError(err) {
+  if (err && err.code === "permission-denied" && S.member && dataTries < 4) {
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(() => { if (S.user && S.member) { dataTries++; subscribeData(); } }, 1200 * (dataTries + 1));
+    return;
+  }
+  onDbError(err);
 }
 /* 초대 코드 확인: invites/<코드> 문서가 있을 때만 규칙이 members/<uid> 생성을 허락해요 */
 function joinWithCode(user, code) {
@@ -1031,7 +1047,9 @@ const hankoHTML = () => `<span class="hanko" aria-label="합격">${hunterSVG(JP_
 
 /* ───────── 화면: 숙제 ───────── */
 function viewHomework() {
-  if (!S.loaded.songs || !S.loaded.lessons) return `<div class="loading">진도표 펼치는 중…</div>`;
+  if (!S.loaded.songs || !S.loaded.lessons) return S.slowLoad
+    ? `<div class="loading"><p style="margin:0 0 12px">진도표를 불러오는 데 시간이 걸리고 있어요.<br>인터넷 연결을 확인하고 새로고침해 주세요.</p><button class="btn primary" data-act="reload">새로고침</button></div>`
+    : `<div class="loading">진도표 펼치는 중…</div>`;
   const nl = nextLesson(), tk = todayK();
   const byNew = (a, b) => assignedDate(b) - assignedDate(a) || b.createdAt - a.createdAt;
   const active = S.songs.filter(s => !isPast(s)).sort(byNew);
@@ -1511,6 +1529,7 @@ const ACT = {
   // (닉네임·초대 코드 입력값은 input 이벤트에서 S에 보관돼요)
   "pop-close": () => { closeSignupPop(); S.authError = ""; render(); },
   "pop-login": () => { closeSignupPop(); S.authMode = "login"; S.authError = ""; render(); },
+  reload: () => location.reload(),
   "welcome-open": () => { S.welcome = true; render(); },
   "welcome-close": (t, e) => { if (t.classList.contains("welcome") && e.target !== t) return; S.welcome = false; render(); },
   "auth-google": async () => {
