@@ -9,3 +9,7 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: "248878206534",
   appId: "1:248878206534:web:cc212c0433caa965208447",
 };
+
+// (선택) 카카오톡 공유 카드용 JavaScript 키. 비워두면 휴대폰 공유창으로 카톡·인스타 DM에 보내요.
+// 받는 방법은 README의 "카카오톡 공유 카드 켜기"를 참고하세요.
+window.KAKAO_JS_KEY = "";

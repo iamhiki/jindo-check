@@ -22,5 +22,37 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid
         && exists(/databases/$(database)/documents/members/$(uid));
     }
+
+    // 선생님께 공유하는 연습 리포트: reports/<랜덤 토큰>
+    // - 링크(토큰)를 아는 사람은 로그인 없이 그 문서 하나만 볼 수 있어요. 목록 조회는 막아서 남의 링크를 찾을 수 없어요.
+    // - 만들고 고치고 지우는 건 가입한 학생 본인만 할 수 있어요.
+    match /reports/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && token.size() >= 20
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.keys().hasOnly(['v', 'owner', 'nickname', 'updatedAt', 'songs', 'lessons'])
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+      allow update: if request.auth != null
+        && resource.data.owner == request.auth.uid
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.keys().hasOnly(['v', 'owner', 'nickname', 'updatedAt', 'songs', 'lessons']);
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+
+      // 선생님 한마디: 링크를 아는 사람은 누구나 짧은 글을 남길 수 있고, 학생 본인만 지울 수 있어요.
+      match /notes/{noteId} {
+        allow read: if true;
+        allow create: if exists(/databases/$(database)/documents/reports/$(token))
+          && request.resource.data.keys().hasOnly(['name', 'text', 'at'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 20
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 300
+          && request.resource.data.at == request.time;
+        allow delete: if request.auth != null
+          && get(/databases/$(database)/documents/reports/$(token)).data.owner == request.auth.uid;
+      }
+    }
   }
 }
