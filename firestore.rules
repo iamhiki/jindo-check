@@ -40,6 +40,20 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['v', 'owner', 'nickname', 'updatedAt', 'songs', 'lessons']);
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
 
+      // 같이 보는 레슨 일정: 공유를 켜면 학생의 레슨 일정이 여기로 옮겨와요.
+      // 링크를 아는 선생님(앱이 없어도)과 학생이 같이 추가·수정·삭제할 수 있어요.
+      match /lessons/{lessonId} {
+        allow read: if true;
+        allow create, update: if exists(/databases/$(database)/documents/reports/$(token))
+          && lessonId.size() <= 40
+          && request.resource.data.keys().hasOnly(['at', 'memo', 'by'])
+          && request.resource.data.at is string
+          && request.resource.data.at.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}')
+          && request.resource.data.memo is string && request.resource.data.memo.size() <= 300
+          && request.resource.data.by is string && request.resource.data.by.size() <= 20;
+        allow delete: if exists(/databases/$(database)/documents/reports/$(token));
+      }
+
       // 선생님 한마디: 링크를 아는 사람은 누구나 짧은 글을 남길 수 있고, 학생 본인만 지울 수 있어요.
       match /notes/{noteId} {
         allow read: if true;

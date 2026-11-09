@@ -113,7 +113,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap
 .btn.danger { color: var(--hanko); }
 .btn.danger.armed { background: var(--hanko); border-color: var(--hanko); color: #fff; }
 .btn.big { width: 100%; justify-content: center; padding: 14px; font-size: 16px; border-radius: 16px; }
-.btn.small { padding: 6px 10px; font-size: 13px; border-radius: 10px; }
+.btn.small { padding: 6px 10px; font-size: 13px; border-radius: 10px; white-space: nowrap; }
 .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--soft); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
 .tabnum { font-variant-numeric: tabular-nums; }
 
@@ -210,6 +210,8 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap
 .daylist .mini { display: flex; }
 .daylist .mini .stamp { width: 24px; margin-left: -7px; }
 .daylist .grow { flex: 1; min-width: 0; }
+.daylist .dname { flex: none; white-space: nowrap; font-size: 14px; }
+.daylist .faces { flex: 1; min-width: 0; }
 
 /* 폼 */
 .form { display: grid; gap: 14px; }
@@ -438,6 +440,36 @@ body.guest { padding-bottom: 32px; }
 .note p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .report-foot { text-align: center; font-size: 12.5px; color: var(--muted); padding-block: 6px 12px; }
 
+/* 연습 타이머 */
+.tm .tm-clock { font-family: var(--display); font-size: 58px; line-height: 1; text-align: center; color: var(--c); margin-top: 12px; font-variant-numeric: tabular-nums; }
+.tm.run .tm-clock { animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .62; } }
+.tm-state { text-align: center; margin: 6px 0 0; font-size: 13px; }
+.tm-ctl { display: grid; gap: 8px; justify-items: center; margin-top: 12px; }
+.tm-ctl .row { justify-content: center; }
+.tm-go { background: var(--c); border-color: var(--c); color: #fff; }
+.tm-go svg { width: 18px; height: 18px; }
+.tm-manual { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.timerbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 31; display: inline-flex; align-items: center; gap: 8px;
+  max-width: calc(100% - 32px); border: 0; border-radius: 999px; padding: 6px 14px 6px 6px; background: var(--c, var(--accent)); color: #fff; font-weight: 600; font-size: 14px; box-shadow: var(--shadow); }
+.timerbar .stamp { width: 28px; flex: none; }
+.timerbar .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timerbar .tm-clock { font-variant-numeric: tabular-nums; flex: none; }
+.timerbar.paused { opacity: .88; }
+body.timing .toast { bottom: calc(142px + env(safe-area-inset-bottom, 0px)); }
+
+/* 같이 보는 레슨 일정 */
+.lrows { display: grid; }
+.lrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding-block: 10px; border-bottom: 1px solid var(--line); }
+.lrow:last-child { border-bottom: 0; }
+.lrow .ld { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lrow .ld b { font-family: var(--display); font-weight: 400; font-size: 17px; }
+.lrow .ld span { color: var(--muted); font-size: 13.5px; }
+.lrow .lm { grid-column: 1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+.lrow .lm:empty { display: none; }
+.lrow > .row { grid-column: 2; grid-row: 1 / span 2; flex-wrap: nowrap; }
+.lrow.past { opacity: .62; }
+
 /* 선생님께 공유 */
 .share-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 @media (min-width: 640px) { .share-grid { grid-template-columns: repeat(4, 1fr); } }
@@ -496,6 +528,7 @@ body.guest { padding-bottom: 32px; }
 <div id="welcome"></div>
 <div id="signup"></div>
 <div id="toast" aria-live="polite"></div>
+<div id="timerbar"></div>
 
 <div class="tabbar">
   <nav aria-label="화면">
@@ -838,6 +871,7 @@ const S = {
   report: undefined, reportNotes: [], // 링크로 연 리포트 (undefined = 불러오는 중, null = 없음, "error")
   myNotes: [], // 내 공유 링크에 선생님이 남긴 한마디
   students: [], studentReports: {}, modalNotes: [], // 선생님 모드
+  reportLessons: undefined, modalLessons: undefined, lessonEdit: null, lessonArm: null, // 선생님과 같이 보는 레슨 일정
 };
 const FB_VER = "10.14.1";
 let FB = null, unsubs = [];
@@ -874,8 +908,19 @@ function del(path) {
 const strip = o => { const { id, ...rest } = o; return rest; };
 function saveSong(s) { const i = S.songs.findIndex(x => x.id === s.id); if (i < 0) S.songs.push(s); else S.songs[i] = s; put("songs/" + s.id, strip(s)); }
 function removeSong(id) { S.songs = S.songs.filter(s => s.id !== id); del("songs/" + id); }
-function saveLesson(l) { const i = S.lessons.findIndex(x => x.id === l.id); if (i < 0) S.lessons.push(l); else S.lessons[i] = l; put("lessons/" + l.id, strip(l)); }
-function removeLesson(id) { S.lessons = S.lessons.filter(l => l.id !== id); del("lessons/" + id); }
+/* 공유 중이면 레슨은 reports/<토큰>/lessons (선생님과 같이 보는 일정), 아니면 users/<나>/lessons */
+function saveLesson(l) {
+  const i = S.lessons.findIndex(x => x.id === l.id); if (i < 0) S.lessons.push(l); else S.lessons[i] = l;
+  const tok = sharedTok();
+  if (tok && FB && S.user) FB.api.setDoc(FB.api.doc(sharedLessons(tok), l.id), lessonBody(l)).catch(saveError);
+  else put("lessons/" + l.id, { at: l.at, memo: l.memo || "" });
+}
+function removeLesson(id) {
+  S.lessons = S.lessons.filter(l => l.id !== id);
+  const tok = sharedTok();
+  if (tok && FB && S.user) FB.api.deleteDoc(FB.api.doc(sharedLessons(tok), id)).catch(saveError);
+  else del("lessons/" + id);
+}
 function saveSettings(patch) { S.settings = { ...S.settings, ...patch }; put("settings/main", S.settings); }
 function saveSkin(ch, data) {
   if (data) { S.skins[ch] = data; put("skins/" + ch, { data }); }
@@ -934,6 +979,8 @@ function subscribe() {
 function subscribeData() {
   const { collection, doc, onSnapshot } = FB.api, me = ["users", S.user.uid];
   dataUnsubs.forEach(u => u()); dataUnsubs = [];
+  if (lessonsUnsub) lessonsUnsub();
+  lessonsUnsub = null; lessonsSrc = null;
   clearTimeout(loadTimer);
   loadTimer = setTimeout(() => { if (!S.loaded.songs || !S.loaded.lessons) { S.slowLoad = true; render(); } }, 12000);
   const onErr = err => dataError(err);
@@ -943,16 +990,12 @@ function subscribeData() {
     if (S.modal && S.modal.type === "song" && !songById(S.modal.id)) S.modal = null;
     maybeWelcome(); schedulePublish(); render();
   }, onErr));
-  dataUnsubs.push(onSnapshot(collection(FB.fs, ...me, "lessons"), snap => {
-    S.lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    S.loaded.lessons = true; if (S.loaded.songs) { S.slowLoad = false; clearTimeout(loadTimer); }
-    schedulePublish(); render();
-  }, onErr));
+  // 레슨 일정은 공유 여부에 따라 위치가 달라서, 설정을 읽은 뒤 watchLessons()가 구독해요
   dataUnsubs.push(onSnapshot(doc(FB.fs, ...me, "settings", "main"), snap => {
     const next = { ...DEFAULT_SETTINGS, ...(snap.exists() ? snap.data() : {}) };
     if (next.faceStyle !== S.settings.faceStyle) faceCache.clear();
     S.settings = next; S.settingsLoaded = true; maybeWelcome();
-    watchMyNotes(); schedulePublish(); render();
+    watchMyNotes(); watchLessons(); schedulePublish(); render();
   }, onErr));
   // 선생님 모드: 내가 추가한 학생 목록 (users/<나>/students/<공유 토큰>)
   dataUnsubs.push(onSnapshot(collection(FB.fs, ...me, "students"), snap => {
@@ -1007,8 +1050,56 @@ function onDbError(err) {
 const REPORT_DAYS = 120;
 let pubTimer = null, lastPub = "", myNotesFor = null, myNotesUnsub = null, modalNotesFor = null, modalNotesUnsub = null;
 const studentSubs = new Map();
+/* 레슨 일정 위치: 공유를 켜면 reports/<토큰>/lessons 로 옮겨서 선생님도 같이 보고 고칠 수 있어요.
+   옮길 때는 복사 → 구독 바꾸기 → 예전 것 지우기 순서라 일정이 잠깐도 사라지지 않아요. */
+let lessonsSrc = null, lessonsUnsub = null, lessonsBusy = false, lessonsFail = null, sharePending = false;
+const privLessons = () => FB.api.collection(FB.fs, "users", S.user.uid, "lessons");
+const sharedLessons = tok => FB.api.collection(FB.api.doc(FB.fs, "reports", tok), "lessons");
+const sharedTok = () => lessonsSrc && lessonsSrc.startsWith("r:") ? lessonsSrc.slice(2) : null;
+const lessonBody = (l, by = "") => ({ at: l.at, memo: String(l.memo || "").slice(0, 300), by: String(by || "").slice(0, 20) });
+const lessonsFrom = snap => snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => typeof l.at === "string");
+async function copyLessons(from, to, toShared) {
+  const snap = await FB.api.getDocs(from);
+  await Promise.all(snap.docs.map(d => {
+    const x = d.data();
+    return FB.api.setDoc(FB.api.doc(to, d.id), toShared ? lessonBody(x, x.by) : { at: x.at, memo: x.memo || "" });
+  }));
+  return snap.docs.map(d => d.ref);
+}
+function subscribeLessons(src) {
+  if (lessonsUnsub) lessonsUnsub();
+  lessonsSrc = src; S.loaded.lessons = false;
+  const tok = src.startsWith("r:") ? src.slice(2) : null;
+  lessonsUnsub = FB.api.onSnapshot(tok ? sharedLessons(tok) : privLessons(), snap => {
+    S.lessons = lessonsFrom(snap);
+    S.loaded.lessons = true; if (S.loaded.songs) { S.slowLoad = false; clearTimeout(loadTimer); }
+    schedulePublish(); render();
+  }, err => {
+    if (tok) { lessonsFail = src; subscribeLessons("u"); return; } // 같이 보는 일정을 못 읽으면 내 일정으로
+    dataError(err);
+  });
+}
+async function watchLessons() {
+  if (!FB || !S.user || !S.member || !S.settingsLoaded || lessonsBusy || sharePending) return;
+  const tok = S.settings.shareToken || null, want = tok ? "r:" + tok : "u";
+  if (want === lessonsSrc) return;
+  if (want === lessonsFail) { if (!lessonsSrc) subscribeLessons("u"); return; }
+  let moved = [];
+  if (tok) {
+    lessonsBusy = true;
+    try { moved = await copyLessons(privLessons(), sharedLessons(tok), true); }
+    catch (e) { lessonsBusy = false; lessonsFail = want; if (lessonsSrc !== "u") subscribeLessons("u"); return; }
+    lessonsBusy = false;
+    if ((S.settings.shareToken || null) !== tok) { watchLessons(); return; }
+  }
+  subscribeLessons(want);
+  moved.forEach(r => FB.api.deleteDoc(r).catch(() => {}));
+}
 function resetSharing() {
   clearTimeout(pubTimer); lastPub = "";
+  if (lessonsUnsub) lessonsUnsub();
+  lessonsUnsub = null; lessonsSrc = null; lessonsBusy = false; lessonsFail = null; sharePending = false;
+  S.modalLessons = undefined; S.lessonEdit = null; S.lessonArm = null;
   if (myNotesUnsub) myNotesUnsub();
   myNotesUnsub = null; myNotesFor = null; S.myNotes = [];
   studentSubs.forEach(u => u()); studentSubs.clear(); S.students = []; S.studentReports = {};
@@ -1033,9 +1124,11 @@ function buildReport() {
   const songs = S.songs.map(s => {
     const days = {};
     for (const t of s.logs || []) { const k = ymd(new Date(t)); if (k >= fromK) days[k] = (days[k] || 0) + 1; }
+    const mins = {};
+    for (const [k, m] of Object.entries(s.mins || {})) if (k >= fromK && m > 0) mins[k] = Math.round(m);
     const due = dueLesson(s);
-    return { title: s.title || "", memo: s.memo || "", target: s.target || 1, char: s.char || "gon", assigned: ymd(assignedDate(s)), due: due ? due.at : null, days };
-  }).filter(s => !(s.due && parseAt(s.due) < from) || Object.keys(s.days).length);
+    return { title: s.title || "", memo: s.memo || "", target: s.target || 1, char: s.char || "gon", assigned: ymd(assignedDate(s)), due: due ? due.at : null, days, mins };
+  }).filter(s => !(s.due && parseAt(s.due) < from) || Object.keys(s.days).length || Object.keys(s.mins).length);
   return {
     v: 1, nickname: nick(), songs,
     lessons: S.lessons.filter(l => l.at.slice(0, 10) >= fromK).map(l => ({ at: l.at, memo: l.memo || "" })),
@@ -1053,7 +1146,7 @@ function publishReport() {
   const body = buildReport(), key = tok + JSON.stringify(body);
   if (key === lastPub) return;
   lastPub = key;
-  FB.api.setDoc(FB.api.doc(FB.fs, "reports", tok), { ...body, owner: S.user.uid, updatedAt: new Date().toISOString() }).catch(err => {
+  return FB.api.setDoc(FB.api.doc(FB.fs, "reports", tok), { ...body, owner: S.user.uid, updatedAt: new Date().toISOString() }).catch(err => {
     lastPub = "";
     toast(err && err.code === "permission-denied"
       ? "공유 링크를 올리지 못했어요. Firestore 규칙을 새로 붙여넣었는지 확인해 주세요."
@@ -1061,22 +1154,35 @@ function publishReport() {
   });
 }
 const canShareLive = () => S.backend === "cloud" && !!S.user && !!S.member;
-function enableShare() {
+async function enableShare() {
   if (!canShareLive()) return;
+  sharePending = true; lessonsFail = null;
   saveSettings({ shareToken: newToken() });
-  lastPub = ""; publishReport(); watchMyNotes(); render();
+  lastPub = ""; watchMyNotes(); render();
+  await publishReport(); // 리포트가 먼저 있어야 레슨 일정을 옮길 수 있어요
+  sharePending = false;
+  watchLessons();
 }
 /* 공유 끄기: 리포트와 남은 한마디를 지워서 예전 링크가 더 이상 열리지 않게 해요 */
 async function disableShare(silent) {
   const tok = S.settings.shareToken;
   if (!FB || !tok) return;
   clearTimeout(pubTimer);
+  sharePending = true;
+  // 같이 보던 레슨 일정을 먼저 내 쪽으로 복사해요. 실패하면 일정이 사라지지 않게 공유를 끄지 않아요.
+  if (sharedTok() === tok) {
+    try { await copyLessons(sharedLessons(tok), privLessons(), false); }
+    catch (e) { sharePending = false; toast("레슨 일정을 옮기지 못해서 공유를 끄지 못했어요. 인터넷 연결을 확인해 주세요."); return; }
+  }
   saveSettings({ shareToken: null });
-  lastPub = ""; watchMyNotes(); render();
+  lastPub = ""; watchMyNotes();
+  sharePending = false; lessonsFail = null;
+  await watchLessons();
+  render();
   try {
     const ref = FB.api.doc(FB.fs, "reports", tok);
-    const notes = await FB.api.getDocs(FB.api.collection(ref, "notes"));
-    await Promise.all(notes.docs.map(d => FB.api.deleteDoc(d.ref)));
+    const [notes, ls] = await Promise.all([FB.api.getDocs(FB.api.collection(ref, "notes")), FB.api.getDocs(FB.api.collection(ref, "lessons"))]);
+    await Promise.all([...notes.docs, ...ls.docs].map(d => FB.api.deleteDoc(d.ref)));
     await FB.api.deleteDoc(ref);
   } catch (e) {}
   if (!silent) toast("공유를 껐어요. 예전 링크는 더 이상 열리지 않아요.");
@@ -1097,6 +1203,7 @@ function watchSharedReport() {
     S.report = snap.exists() ? snap.data() : null; render();
   }, err => { S.report = err && err.code === "permission-denied" ? null : "error"; render(); });
   onSnapshot(notesQuery(tok), snap => { S.reportNotes = notesFrom(snap); render(); }, () => {});
+  onSnapshot(sharedLessons(tok), snap => { S.reportLessons = lessonsFrom(snap); render(); }, () => { S.reportLessons = null; render(); });
 }
 /* 학생: 내 링크에 선생님이 남긴 한마디 */
 function watchMyNotes() {
@@ -1122,13 +1229,16 @@ function watchStudents() {
     }, () => { S.studentReports[tok] = "error"; render(); }));
   }
 }
-/* 선생님이 앱 안에서 학생 리포트를 열었을 때 그 학생의 한마디 목록 */
+/* 선생님이 앱 안에서 학생 리포트를 열었을 때 그 학생의 한마디와 레슨 일정 */
 function watchModalNotes() {
   const tok = (FB && S.modal && S.modal.type === "report" && S.modal.token) || null;
   if (tok === modalNotesFor) return;
   if (modalNotesUnsub) modalNotesUnsub();
-  modalNotesUnsub = null; modalNotesFor = tok; S.modalNotes = [];
-  if (tok) modalNotesUnsub = FB.api.onSnapshot(notesQuery(tok), snap => { S.modalNotes = notesFrom(snap); render(); }, () => {});
+  modalNotesUnsub = null; modalNotesFor = tok; S.modalNotes = []; S.modalLessons = undefined;
+  if (!tok) return;
+  const u1 = FB.api.onSnapshot(notesQuery(tok), snap => { S.modalNotes = notesFrom(snap); render(); }, () => {});
+  const u2 = FB.api.onSnapshot(sharedLessons(tok), snap => { S.modalLessons = lessonsFrom(snap); render(); }, () => { S.modalLessons = null; render(); });
+  modalNotesUnsub = () => { u1(); u2(); };
 }
 function addStudent(tok) {
   if (!FB || !S.user || !tok) return false;
@@ -1144,10 +1254,11 @@ function addStudent(tok) {
 function summarize(R) {
   const t0 = today0(), tk = ymd(t0), now = new Date();
   const back = i => { const d = new Date(t0); d.setDate(d.getDate() - i); return d; };
-  const songs = (R.songs || []).map(s => ({ ...s, title: String(s.title || ""), target: Math.max(1, +s.target || 1), days: s.days || {}, assigned: s.assigned || tk }));
+  const songs = (R.songs || []).map(s => ({ ...s, title: String(s.title || ""), target: Math.max(1, +s.target || 1), days: s.days || {}, mins: s.mins || {}, assigned: s.assigned || tk }));
   const total = {};
   for (const s of songs) for (const [k, n] of Object.entries(s.days)) total[k] = (total[k] || 0) + n;
   const lessons = (R.lessons || []).filter(l => l && typeof l.at === "string").map(l => ({ ...l, d: parseAt(l.at) })).sort((a, b) => a.d - b.d);
+  if (Array.isArray(R.lessons)) songs.forEach(s => { const n = lessons.find(l => ymd(l.d) > s.assigned); s.due = n ? n.at : null; });
   const last = [...lessons].reverse().find(l => l.d <= now) || null, next = lessons.find(l => l.d > now) || null;
   // 그 날 해야 했던 숙제: 받은 레슨 날부터 다음 레슨 날까지
   const dueOn = k => songs.filter(s => s.assigned <= k && (!s.due || s.due.slice(0, 10) >= k));
@@ -1171,14 +1282,14 @@ function summarize(R) {
   const open = songs.filter(s => !(s.due && parseAt(s.due) < t0));
   const rows = open.map(s => {
     const dots = [];
-    let sets7 = 0, goalDays = 0;
+    let sets7 = 0, goalDays = 0, min7 = 0;
     for (let i = 13; i >= 0; i--) {
       const k = ymd(back(i)), n = s.days[k] || 0;
       dots.push({ k, n, cls: n >= s.target ? "full" : n ? "part" : k < s.assigned ? "pre" : "" });
-      if (i < 7) { sets7 += n; if (n >= s.target) goalDays++; }
+      if (i < 7) { sets7 += n; min7 += s.mins[k] || 0; if (n >= s.target) goalDays++; }
     }
     const span7 = Math.max(1, Math.min(7, dayDiff(t0, parseYmd(s.assigned)) + 1));
-    return { ...s, today: s.days[tk] || 0, dots, sets7, goalDays, span7 };
+    return { ...s, today: s.days[tk] || 0, dots, sets7, goalDays, span7, min7 };
   });
   const byChar = {};
   songs.forEach(s => { byChar[s.char] = (byChar[s.char] || 0) + Object.values(s.days).reduce((a, b) => a + b, 0) + .1; });
@@ -1186,6 +1297,7 @@ function summarize(R) {
   return {
     nickname: String(R.nickname || "학생"), updatedAt: R.updatedAt || null, total, week, streak, last, next, since, songs: rows, mainChar,
     week7: week.reduce((a, x) => a + x.n, 0), days7: week.filter(x => x.n).length,
+    min7: week.reduce((a, x) => a + songs.reduce((b, s) => b + (s.mins[x.k] || 0), 0), 0),
     lastDay: Object.keys(total).filter(k => total[k] > 0).sort().pop() || null,
     info: k => {
       const n = total[k] || 0;
@@ -1239,6 +1351,8 @@ const ICON = {
   insta: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>`,
   send: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 13v5.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V13"/></svg>`,
   eye: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6L18.8 12z"/></svg>`,
+  cal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9 14.5l2 2 4-4"/></svg>`,
   chat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>`,
 };
 const noteHTML = (n, delTok) => `<div class="note"><div class="who"><b>${esc(n.name)}</b><time>${fmtShort(n.at)} ${fmtTime(n.at)}</time>${delTok ? `<button class="btn small" data-act="note-del" data-token="${delTok}" data-id="${n.id}">지우기</button>` : ""}</div><p>${esc(n.text)}</p></div>`;
@@ -1250,13 +1364,48 @@ function noteFormHTML(tok, name) {
   </form>`;
 }
 /* 리포트 본문. o.notes: 한마디 목록, o.noteForm: {token, name} 이면 남기기 칸, o.delTok: 지우기 버튼 */
+/* 레슨 일정 패널. P = { tok, canEdit, time } */
+function lessonFormHTML(P, l) {
+  const k = l ? l.id : "new", date = l ? l.at.slice(0, 10) : ymd(new Date()), time = l ? l.at.slice(11, 16) : (P.time || "19:00");
+  return `<form class="lesson-box form" data-form="share-lesson" data-token="${P.tok}" data-id="${l ? l.id : ""}" style="margin-block:8px;gap:10px">
+    <div class="row" style="flex-wrap:nowrap">
+      <label class="field" style="flex:1"><span>날짜</span><input class="input" type="date" id="sl-date-${k}" data-keep name="date" required value="${date}"></label>
+      <label class="field" style="flex:1"><span>시간</span><input class="input" type="time" id="sl-time-${k}" data-keep name="time" required value="${time}"></label>
+    </div>
+    <label class="field"><span>메모</span><input class="input" id="sl-memo-${k}" data-keep name="memo" maxlength="300" autocomplete="off" placeholder="예: 셔플 리듬 점검, 교재 24쪽…" value="${esc(l ? l.memo : "")}"></label>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn small" data-act="sl-cancel">취소</button><button class="btn small primary" type="submit">${l ? "고치기" : "레슨 추가"}</button></div>
+  </form>`;
+}
+function lessonPanelHTML(list, P) {
+  const t0 = today0();
+  const all = (list || []).filter(l => l && typeof l.at === "string").map(l => ({ ...l, d: parseAt(l.at) })).sort((a, b) => a.d - b.d);
+  const up = all.filter(l => l.d >= t0), past = all.filter(l => l.d < t0).slice(-2).reverse();
+  const ed = P.canEdit && S.lessonEdit && S.lessonEdit.tok === P.tok ? S.lessonEdit : null;
+  const row = l => ed && ed.id && ed.id === l.id ? lessonFormHTML(P, l) : `<div class="lrow ${l.d < t0 ? "past" : ""}">
+      <div class="ld"><b>${fmtDay(l.d)}</b><span>${fmtTime(l.d)}</span></div>
+      <div class="lm">${l.memo ? `<span>${esc(l.memo)}</span>` : ""}${l.by ? `<span class="chip">${esc(l.by)} 정함</span>` : ""}</div>
+      ${P.canEdit && l.id ? `<span class="row"><button class="btn small" data-act="sl-edit" data-token="${P.tok}" data-id="${l.id}">수정</button><button class="btn small danger ${S.lessonArm === l.id ? "armed" : ""}" data-act="sl-del" data-token="${P.tok}" data-id="${l.id}">${S.lessonArm === l.id ? "정말 삭제" : "삭제"}</button></span>` : ""}
+    </div>`;
+  const adding = ed && !ed.id;
+  return `<div class="panel"><div class="section-head" style="align-items:center"><h2>레슨 일정</h2><span class="spacer"></span>
+      ${P.canEdit && !adding ? `<button class="btn small primary" data-act="sl-new" data-token="${P.tok}">＋ 레슨 추가</button>` : ""}</div>
+    <p class="muted" style="margin:2px 0 4px;font-size:13px">${P.canEdit ? "여기서 고치면 학생 앱 달력에도 바로 보여요." : "선생님과 같이 보는 일정이에요."}</p>
+    ${adding ? lessonFormHTML(P, null) : ""}
+    <div class="lrows">${up.map(row).join("") || `<p class="muted" style="margin:8px 0 0;font-size:14px">다음 레슨 일정이 없어요.${P.canEdit ? " 레슨 추가를 눌러 정해주세요." : ""}</p>`}
+      ${past.length ? `<div class="muted" style="font-size:12.5px;margin-top:10px">지난 레슨</div>${past.map(row).join("")}` : ""}</div>
+  </div>`;
+}
+/* o.lessons: 같이 보는 레슨 일정(실시간), o.lessonPanel: { tok, canEdit } 이면 레슨 일정 패널 */
 function viewReportBody(R, o = {}) {
+  // 같이 보는 일정이 있으면 그걸로 계산해요 (학생 앱이 업데이트 전이라 비어 있으면 리포트에 있던 일정으로)
+  const live = Array.isArray(o.lessons) && (o.lessons.length || !(R.lessons || []).length) ? o.lessons : null;
+  if (live) R = { ...R, lessons: live.map(l => ({ at: l.at, memo: l.memo || "" })) };
   const X = summarize(R), max = Math.max(1, ...X.week.map(w => w.n));
   const head = `<div class="panel report-head">${stampHTML(X.mainChar, "flat")}<div style="min-width:0">
       <h2>${esc(X.nickname)}님의 연습 기록</h2>
       <div class="muted">${X.updatedAt ? `${ago(X.updatedAt)} 업데이트` : "지금 기록 기준"}${X.next ? ` · 다음 레슨 ${fmtShort(X.next.d)} (${WD[X.next.d.getDay()]}) ${fmtTime(X.next.d)}` : ""}</div></div></div>`;
   const stats = `<div class="stats">
-      <div class="stat hl"><b class="tabnum">${X.week7}</b><span>최근 7일 세트</span></div>
+      <div class="stat hl"><b class="tabnum">${X.week7}</b><span>최근 7일 세트${X.min7 ? ` · ${fmtMin(X.min7)}` : ""}</span></div>
       <div class="stat"><b class="tabnum">${X.days7}<i>/7일</i></b><span>최근 7일 중 연습한 날</span></div>
       <div class="stat"><b class="tabnum">${X.streak}<i>일</i></b><span>연속 연습</span></div>
       ${X.since
@@ -1274,7 +1423,7 @@ function viewReportBody(R, o = {}) {
     const c = CH[s.char] || CHARS[0], full = s.dots.filter(d => d.cls === "full").length;
     return `<div class="rsong" style="--c:${c.color}">${stampHTML(s.char)}
       <div style="min-width:0"><div class="title">${esc(s.title)}</div>
-        <div class="meta">하루 ${s.target}세트${s.due ? ` · ${fmtShort(parseAt(s.due))} 레슨까지` : ""}${s.memo ? ` · ${esc(s.memo)}` : ""}</div>
+        <div class="meta">하루 ${s.target}세트${s.min7 ? ` · 7일 ${fmtMin(s.min7)}` : ""}${s.due ? ` · ${fmtShort(parseAt(s.due))} 레슨까지` : ""}${s.memo ? ` · ${esc(s.memo)}` : ""}</div>
         <div class="dots" role="img" aria-label="최근 14일 중 목표를 채운 날 ${full}일">${s.dots.map((d, i) => `<i class="${d.cls}${i === 13 ? " today" : ""}" title="${fmtShort(parseYmd(d.k))} ${d.n}/${s.target}세트"></i>`).join("")}</div></div>
       <div class="num tabnum">${s.goalDays}/${s.span7}일<small>7일 중 목표 채움</small><small>오늘 ${s.today}/${s.target}세트</small></div></div>`;
   }).join("");
@@ -1289,7 +1438,13 @@ function viewReportBody(R, o = {}) {
       ${o.noteForm ? noteFormHTML(o.noteForm.token, o.noteForm.name) : ""}
       <div class="notes" style="margin-top:${o.noteForm ? 12 : 0}px">${list}</div></div>`;
   }
-  return head + stats + chart + songs + heat + notes;
+  let lessonsP = "";
+  if (o.lessonPanel) {
+    const lastT = (R.lessons || []).map(l => l.at).sort().pop();
+    // 고치기는 같이 보는 일정을 실제로 읽어온 경우에만 (규칙이 없거나 공유가 꺼졌으면 보기만)
+    lessonsP = lessonPanelHTML(live || o.lessons || R.lessons, { ...o.lessonPanel, canEdit: !!o.lessonPanel.canEdit && Array.isArray(o.lessons), time: lastT ? lastT.slice(11, 16) : "19:00" });
+  }
+  return head + stats + lessonsP + chart + songs + heat + notes;
 }
 /* ?r=<토큰> 링크로 연 화면 */
 function viewReportPage() {
@@ -1315,7 +1470,7 @@ function viewReportPage() {
       ? `<div class="panel row" style="justify-content:space-between"><span style="font-size:14px">${added ? "내 학생 목록에 있는 학생이에요." : "내 학생 목록에 넣으면 여러 학생을 한눈에 볼 수 있어요."}</span>${added ? `<button class="btn small" data-act="go-app" data-tab="students">학생 목록 열기</button>` : `<button class="btn small primary" data-act="student-add-this">내 학생으로 추가</button>`}</div>`
       : "";
   return `<section class="section report">${bar}
-    ${viewReportBody(R, { notes: S.reportNotes, noteForm: mine ? null : { token: tok, name }, delTok: mine ? tok : null })}
+    ${viewReportBody(R, { notes: S.reportNotes, noteForm: mine ? null : { token: tok, name }, delTok: mine ? tok : null, lessons: S.reportLessons, lessonPanel: { tok, canEdit: !mine } })}
     <p class="report-foot">학생이 진도 체크판에서 색칠할 때마다 이 화면이 저절로 바뀌어요.<br>즐겨찾기나 홈 화면에 추가해 두면 언제든 다시 볼 수 있어요.</p>
   </section>`;
 }
@@ -1332,7 +1487,7 @@ function viewSharePanel() {
   if (live && tok) body = `<p class="muted" style="margin:0;font-size:14px">이 링크를 선생님께 한 번만 보내두면 돼요. 선생님은 앱이 없어도 카톡이나 인스타 DM에서 링크를 눌러 언제든 최신 기록을 봐요. 색칠할 때마다 저절로 바뀌어요.</p>
       <div class="linkbox"><code>${esc(url)}</code><button class="btn small" data-act="copy-link">복사</button></div>
       ${grid}
-      <div class="row" style="justify-content:flex-end"><button class="btn small" data-act="share-regen">링크 새로 만들기</button><button class="btn small danger" data-act="share-off">공유 끄기</button></div>`;
+      <div class="row" style="justify-content:flex-end"><button class="btn small ${S.shareArm === "regen" ? "danger armed" : ""}" data-act="share-regen">${S.shareArm === "regen" ? "예전 링크는 안 열려요. 바꿀까요?" : "링크 새로 만들기"}</button><button class="btn small danger ${S.shareArm === "off" ? "armed" : ""}" data-act="share-off">${S.shareArm === "off" ? "정말 끌까요?" : "공유 끄기"}</button></div>`;
   else if (live) body = `<p class="muted" style="margin:0;font-size:14px">공유 링크를 만들어 선생님께 보내면, 선생님은 앱 없이도 링크를 눌러 내 연습 기록을 실시간으로 볼 수 있어요. 숙제 이름, 메모, 날짜별 세트 수가 보이고 이메일은 보이지 않아요.</p>
       <button class="btn primary big" data-act="share-on">공유 링크 만들기</button>
       ${grid}`;
@@ -1341,6 +1496,19 @@ function viewSharePanel() {
       <div class="notes">${S.myNotes.length ? S.myNotes.slice(0, 10).map(n => noteHTML(n, tok)).join("") : `<p class="muted" style="margin:0;font-size:14px">아직 없어요. 선생님이 링크에서 남기면 여기에 보여요.</p>`}</div></div>` : "";
   return `<div class="panel"><div class="section-head"><h2>선생님께 보여주기</h2></div>
     <div class="form" style="gap:12px;margin-top:8px">${body}</div>${notes}</div>`;
+}
+/* 숙제 탭 위: 선생님이 레슨 일정을 정하거나 바꿨을 때 */
+function lessonBannerHTML() {
+  if (!S.user || !sharedTok()) return "";
+  const t0 = today0(), list = S.lessons.filter(l => l.by && parseAt(l.at) >= t0).sort((a, b) => a.at.localeCompare(b.at));
+  if (!list.length) return "";
+  const sig = list.map(l => l.id + l.at + (l.memo || "")).join("|");
+  let seen = null;
+  try { seen = localStorage.getItem("lesson-seen-" + S.user.uid); } catch (e) {}
+  if (seen === sig) return "";
+  return `<section class="section"><div class="panel notebanner" role="status">${ICON.cal}
+    <div style="min-width:0"><b>선생님이 레슨 일정을 정했어요</b><p>${list.slice(0, 3).map(l => `${fmtDay(parseAt(l.at))} ${fmtTime(parseAt(l.at))}${l.memo ? " · " + esc(l.memo) : ""}`).join("\n")}</p></div>
+    <button class="btn small" data-act="lesson-seen" data-sig="${esc(sig)}">확인</button></div></section>`;
 }
 /* 숙제 탭 위: 새 한마디 알림 */
 function noteBannerHTML() {
@@ -1362,9 +1530,9 @@ function studentCard(s) {
   const gap = X.lastDay ? dayDiff(today0(), parseYmd(X.lastDay)) : null;
   return `<button class="stu" data-act="student-open" data-token="${s.token}" aria-label="${esc(X.nickname)} 연습 기록 열기">${stampHTML(X.mainChar, "flat")}
     <div style="min-width:0"><div class="name">${esc(X.nickname)}</div>
-      <div class="meta ${gap === null || gap >= 3 ? "warn" : ""}">마지막 연습 ${dayAgo(X.lastDay)} · 연속 ${X.streak}일</div>
+      <div class="meta ${gap === null || gap >= 3 ? "warn" : ""}">마지막 연습 ${dayAgo(X.lastDay)} · 연속 ${X.streak}일${X.next ? ` · 다음 레슨 ${fmtShort(X.next.d)}` : ""}</div>
       <div class="spark" aria-hidden="true">${X.week.map(w => w.n ? `<i style="height:${Math.max(20, Math.round(w.n / max * 100))}%"></i>` : `<i class="z"></i>`).join("")}</div></div>
-    <div class="big tabnum">${X.week7}<small>최근 7일 세트</small><small>${X.days7}/7일 연습</small></div></button>`;
+    <div class="big tabnum">${X.week7}<small>최근 7일 세트</small><small>${X.days7}/7일 연습${X.min7 ? ` · ${fmtMin(X.min7)}` : ""}</small></div></button>`;
 }
 function viewStudents() {
   const list = S.students.map(s => ({ ...s, R: S.studentReports[s.token] }));
@@ -1557,12 +1725,12 @@ function viewHomework() {
   const active = S.songs.filter(s => !isPast(s)).sort(byNew);
   const past = S.songs.filter(isPast).sort(byNew);
   const doneToday = active.filter(s => doneOn(s, tk)).length;
-  let html = noteBannerHTML();
+  let html = lessonBannerHTML() + noteBannerHTML();
   if (nl) {
     const d = parseAt(nl.at), diff = dayDiff(d, new Date());
     html += `<section class="section"><div class="panel nextlesson">
       <div class="dday">${diff === 0 ? "오늘" : "D-" + diff}<small>다음 레슨</small></div>
-      <div><h3>${fmtDay(d)} ${fmtTime(d)}</h3><div class="memo">${nl.memo ? esc(nl.memo) + " · " : ""}오늘 숙제 ${active.length}개 중 ${doneToday}개 완료</div></div>
+      <div><h3>${fmtDay(d)} ${fmtTime(d)}</h3><div class="memo">${nl.by ? esc(nl.by) + " 정함 · " : ""}${nl.memo ? esc(nl.memo) + " · " : ""}오늘 숙제 ${active.length}개 중 ${doneToday}개 완료</div></div>
       <button class="btn small" data-act="goto-day" data-d="${ymd(d)}">달력</button>
     </div></section>`;
   } else if (S.songs.length) {
@@ -1602,7 +1770,7 @@ function cardHTML(s, k) {
   const meta = due ? `${fmtShort(parseAt(due.at))} 레슨까지 매일` : `${fmtShort(assignedDate(s))} 레슨 숙제`;
   return `<div class="hw ${d ? "done" : ""}" style="--c:${c.color}" data-act="open-song" data-id="${s.id}" role="button" tabindex="0" aria-label="${esc(s.title)} 오늘 ${n}/${s.target}세트, 진도표 열기">
     ${stampHTML(s.char)}
-    <div style="min-width:0"><div class="title">${esc(s.title)}</div><div class="meta">${meta}</div>${facesRow(s, n)}</div>
+    <div style="min-width:0"><div class="title">${esc(s.title)}</div><div class="meta">${meta}${dayMins(s, k) ? ` · ${fmtMin(dayMins(s, k))}` : ""}${timer && timer.id === s.id ? " · 타이머 켜짐" : ""}</div>${facesRow(s, n)}</div>
     <div class="num tabnum">${n}<small>/ ${s.target}세트</small>${d ? "" : `<button class="plus" data-act="stamp" data-id="${s.id}" aria-label="${esc(s.title)} 1세트 체크">＋1세트</button>`}</div>
     ${d ? hankoHTML() : ""}
   </div>`;
@@ -1645,6 +1813,7 @@ function dayPanel(k, prs, lesson) {
     html += `<div class="lesson-box">
       <div class="row" style="justify-content:space-between"><span class="time">${fmtTime(at)} 레슨</span>
         <span class="row"><button class="btn small" data-act="edit-lesson" data-id="${lesson.id}">수정</button><button class="btn small" data-act="ics" data-id="${lesson.id}">캘린더 앱에 추가</button></span></div>
+      ${lesson.by ? `<div><span class="chip">선생님이 정한 일정 · ${esc(lesson.by)}</span></div>` : ""}
       ${lesson.memo ? `<div>${esc(lesson.memo)}</div>` : ""}
       <div class="muted" style="font-size:13px">이 레슨에서 받은 숙제</div>
       <div class="hwchips">${hw.map(s => `<button class="hwchip" data-act="open-song" data-id="${s.id}">${stampHTML(s.char)}${esc(s.title)} · 하루 ${s.target}세트</button>`).join("") || `<span class="muted" style="font-size:13px">아직 없어요</span>`}</div>
@@ -1657,7 +1826,7 @@ function dayPanel(k, prs, lesson) {
   prs.forEach(p => { counts[p.song.id] = (counts[p.song.id] || 0) + 1; });
   const ids = Object.keys(counts);
   html += `<div style="margin-top:14px"><div class="muted" style="font-size:13px;margin-bottom:4px">이 날 연습</div>`;
-  html += ids.length ? `<div class="daylist">${ids.map(id => { const s = songById(id); return `<div><span style="width:30px;flex:none">${stampHTML(s.char)}</span><span class="grow">${esc(s.title)}</span><b class="tabnum">${counts[id]}/${s.target}세트${counts[id] >= s.target ? " ✓" : ""}</b></div>`; }).join("")}</div>`
+  html += ids.length ? `<div class="daylist">${ids.map(id => { const s = songById(id); return `<div><span style="width:30px;flex:none">${stampHTML(s.char)}</span><span class="grow">${esc(s.title)}</span><b class="tabnum">${counts[id]}/${s.target}세트${counts[id] >= s.target ? " ✓" : ""}${dayMins(s, k) ? ` · ${fmtMin(dayMins(s, k))}` : ""}</b></div>`; }).join("")}</div>`
     : `<div class="muted" style="font-size:14px">체크한 세트가 없어요</div>`;
   return html + `</div>`;
 }
@@ -1667,6 +1836,8 @@ function viewHistory() {
   const byDay = practiceByDay(), all = S.songs.flatMap(s => s.logs || []);
   const t0 = today0(), weekStart = new Date(t0); weekStart.setDate(t0.getDate() - t0.getDay());
   const week = all.filter(t => t >= +weekStart).length;
+  const wk = ymd(weekStart), minsAll = S.songs.flatMap(s => Object.entries(s.mins || {}));
+  const weekMin = minsAll.filter(([k]) => k >= wk).reduce((a, [, m]) => a + m, 0), totMin = minsAll.reduce((a, [, m]) => a + m, 0);
   let streak = 0; const cur = new Date(t0);
   if (!byDay.has(ymd(cur))) cur.setDate(cur.getDate() - 1);
   while (byDay.has(ymd(cur))) { streak++; cur.setDate(cur.getDate() - 1); }
@@ -1676,8 +1847,8 @@ function viewHistory() {
   return `<section class="section">
     ${viewSharePanel()}
     <div class="stats">
-      <div class="stat"><b class="tabnum">${all.length}</b><span>총 연습 (세트)</span></div>
-      <div class="stat"><b class="tabnum">${week}</b><span>이번 주 (세트)</span></div>
+      <div class="stat"><b class="tabnum">${all.length}</b><span>총 연습 (세트)${totMin ? ` · ${fmtMin(totMin)}` : ""}</span></div>
+      <div class="stat"><b class="tabnum">${week}</b><span>이번 주 (세트)${weekMin ? ` · ${fmtMin(weekMin)}` : ""}</span></div>
       <div class="stat"><b class="tabnum">${streak}</b><span>연속 연습 (일)</span></div>
       <div class="stat"><b class="tabnum">${passDays}</b><span>목표 채운 날 (숙제별)</span></div>
     </div>
@@ -1787,8 +1958,9 @@ function modalSong(m) {
       ${edit}
     </div>
     <div style="margin-block:12px"><button class="btn primary big" style="background:var(--c);border-color:var(--c);color:#fff" data-act="stamp" data-id="${s.id}">${isToday ? "1세트 끝! 색칠하기" : fmtShort(dd) + " 1세트 색칠하기"}</button></div>
-    <div class="panel"><h3 style="font-size:18px">날짜별 기록</h3>
-      ${allDays.length ? `<div class="daylist">${allDays.map(x => { const cnt = dayLogs(s, x).length; return `<div role="button" tabindex="0" data-act="day-pick" data-d="${x}" style="cursor:pointer"><span class="grow">${fmtDay(parseYmd(x))}</span>${facesRow(s, cnt).replace('class="faces"', 'class="faces" style="margin:0"')}<b class="tabnum" style="min-width:60px;text-align:right">${cnt}/${s.target}${cnt >= s.target ? " ✓" : ""}</b></div>`; }).join("")}</div>` : `<p class="muted" style="margin:6px 0 0">아직 색칠한 날이 없어요.</p>`}
+    ${timerPanelHTML(s, k, isToday)}
+    <div class="panel" style="margin-top:12px"><h3 style="font-size:18px">날짜별 기록</h3>
+      ${allDays.length ? `<div class="daylist">${allDays.map(x => { const cnt = dayLogs(s, x).length; return `<div role="button" tabindex="0" data-act="day-pick" data-d="${x}" style="cursor:pointer"><span class="dname">${fmtDay(parseYmd(x))}</span>${facesRow(s, cnt).replace('class="faces"', 'class="faces" style="margin:0"')}<b class="tabnum" style="min-width:60px;text-align:right">${cnt}/${s.target}${cnt >= s.target ? " ✓" : ""}</b></div>`; }).join("")}</div>` : `<p class="muted" style="margin:6px 0 0">아직 색칠한 날이 없어요.</p>`}
     </div>
   </div></div>`;
 }
@@ -1844,7 +2016,7 @@ function modalLogoPick() {
 function modalReport(m) {
   const R = m.token ? S.studentReports[m.token] : { ...buildReport(), updatedAt: null };
   const ok = R && R !== "error";
-  const body = ok ? viewReportBody(R, m.token ? { notes: S.modalNotes, noteForm: { token: m.token, name: nick() } } : {})
+  const body = ok ? viewReportBody(R, m.token ? { notes: S.modalNotes, noteForm: { token: m.token, name: nick() }, lessons: S.modalLessons, lessonPanel: { tok: m.token, canEdit: true } } : { lessonPanel: { tok: "", canEdit: false } })
     : `<div class="panel muted">${R === undefined ? "불러오는 중…" : "기록을 열 수 없어요. 학생이 공유를 껐을 수 있어요."}</div>`;
   return `<div class="overlay" data-act="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-label="${m.token ? "학생 연습 기록" : "선생님 화면 미리보기"}">
     <div class="sheet-bar"><button class="x" data-act="close" aria-label="닫기">✕</button><h2>${m.token ? "학생 연습 기록" : "선생님 화면 미리보기"}</h2>
@@ -1884,9 +2056,9 @@ function loadKakao() {
 }
 function summaryText() {
   const X = summarize(buildReport()), url = shareURL();
-  const L = [`🎸 ${X.nickname}의 베이스 연습 기록 (${fmtShort(X.week[0].d)}~${fmtShort(X.week[6].d)})`, `최근 7일 ${X.week7}세트 · ${X.days7}일 연습 · 연속 ${X.streak}일`];
+  const L = [`🎸 ${X.nickname}의 베이스 연습 기록 (${fmtShort(X.week[0].d)}~${fmtShort(X.week[6].d)})`, `최근 7일 ${X.week7}세트 · ${X.days7}일 연습 · 연속 ${X.streak}일${X.min7 ? ` · ${fmtMin(X.min7)}` : ""}`];
   if (X.since) L.push(`${fmtShort(X.since.from)} 레슨 이후 ${X.since.span}일 중 ${X.since.days}일 연습 (${X.since.sets}세트)`);
-  if (X.songs.length) { L.push(""); X.songs.forEach(s => L.push(`• ${s.title}: 7일 동안 ${s.sets7}세트, 목표 채운 날 ${s.goalDays}/${s.span7}일`)); }
+  if (X.songs.length) { L.push(""); X.songs.forEach(s => L.push(`• ${s.title}: 7일 동안 ${s.sets7}세트${s.min7 ? `(${fmtMin(s.min7)})` : ""}, 목표 채운 날 ${s.goalDays}/${s.span7}일`)); }
   if (url) L.push("", "실시간 기록 보기 👉", url);
   return L.join("\n");
 }
@@ -1953,7 +2125,7 @@ async function makeStory() {
   c.fillStyle = "#9FE0B2"; c.font = J(280); c.fillText(big, L - 8, 760);
   const bw0 = c.measureText(big).width;
   c.fillStyle = "#fff"; c.font = J(70); c.fillText("세트", L + bw0 + 14, 760);
-  c.fillStyle = "#E4DDC4"; c.font = B(40); c.fillText(`7일 중 ${X.days7}일 연습 · 연속 ${X.streak}일`, L, 840);
+  c.fillStyle = "#E4DDC4"; c.font = B(38); c.fillText(fit(`7일 중 ${X.days7}일 연습 · 연속 ${X.streak}일${X.min7 ? ` · ${fmtMin(X.min7)}` : ""}`, B(38), R - L), L, 840);
   const top = 930, bh = 250, gap = 22, bw = (R - L - gap * 6) / 7, max = Math.max(1, ...X.week.map(w => w.n));
   X.week.forEach((w, i) => {
     const x = L + i * (bw + gap), h = w.n ? Math.max(16, w.n / max * bh) : 0;
@@ -2096,6 +2268,9 @@ function render() {
   if (logoEl.getAttribute("src") !== logoSrc) logoEl.src = logoSrc;
   const sub = document.getElementById("brand-sub");
   if (!sub.dataset.done) { sub.innerHTML = `진도 체크판 ${hunterSVG("ハンター")}`; sub.dataset.done = 1; }
+  const tb = timerbarHTML(guest);
+  document.getElementById("timerbar").innerHTML = tb;
+  document.body.classList.toggle("timing", !!tb);
   restoreInputs(kept);
   S.justStamped = null;
 }
@@ -2128,6 +2303,72 @@ function stamp(id) {
   else toast(`${c.name} 색칠! ${n} / ${s.target}세트`, { label: "되돌리기", fn: () => unstamp(id, t) });
   render();
 }
+/* ───────── 연습 타이머 ─────────
+   시작 시각을 기기에 저장해서, 화면을 끄거나 앱을 닫았다 열어도 계속 흘러가요.
+   끝내면 그 숙제의 오늘 연습 시간(분)에 더해져요. song.mins = { "2026-11-09": 25, … } */
+const TIMER_KEY = "practice-timer";
+let timer = (() => { try { const t = JSON.parse(localStorage.getItem(TIMER_KEY) || "null"); return t && t.id ? t : null; } catch (e) { return null; } })();
+let tickT = null;
+const saveTimer = () => { try { if (timer) localStorage.setItem(TIMER_KEY, JSON.stringify(timer)); else localStorage.removeItem(TIMER_KEY); } catch (e) {} };
+const timerMs = () => timer ? timer.acc + (timer.start ? Date.now() - timer.start : 0) : 0;
+const clock = ms => { const t = Math.floor(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60; return (h ? h + ":" + pad(m) : pad(m)) + ":" + pad(t % 60); };
+const fmtMin = m => { m = Math.round(m || 0); const h = Math.floor(m / 60); return h ? `${h}시간${m % 60 ? ` ${m % 60}분` : ""}` : `${m}분`; };
+const dayMins = (s, k) => (s.mins && s.mins[k]) || 0;
+function timerStart(id) {
+  if (timer && timer.id !== id) { const o = songById(timer.id); toast(`${o ? o.title : "다른 숙제"} 타이머가 켜져 있어요. 먼저 끝내주세요.`); return; }
+  if (!timer) timer = { id, acc: 0, start: Date.now() };
+  else if (!timer.start) timer.start = Date.now();
+  S.tmArm = false; saveTimer(); tickOn(); render();
+}
+function timerPause() { if (!timer || !timer.start) return; timer.acc += Date.now() - timer.start; timer.start = null; S.tmArm = false; saveTimer(); render(); }
+function timerFinish() {
+  if (!timer) return;
+  const id = timer.id, s = songById(id), min = Math.round(timerMs() / 6e4);
+  if (min < 1) { toast("1분 넘게 연습해야 기록돼요. 조금만 더 해볼까요?"); return; }
+  const k = todayK();
+  timer = null; S.tmArm = false; saveTimer();
+  if (s) {
+    saveSong({ ...s, mins: { ...(s.mins || {}), [k]: dayMins(s, k) + min } });
+    toast(`${fmtMin(min)} 연습을 기록했어요.`, dayLogs(s, k).length < s.target ? { label: "1세트도 색칠", fn: () => stamp(id) } : null);
+  }
+  render();
+}
+function timerReset() { timer = null; S.tmArm = false; saveTimer(); toast("타이머를 지웠어요."); render(); }
+function tickOn() { if (!tickT) tickT = setInterval(tick, 1000); }
+function tick() {
+  if (!timer) { clearInterval(tickT); tickT = null; return; }
+  const txt = clock(timerMs());
+  document.querySelectorAll(".tm-clock").forEach(e => { if (e.textContent !== txt) e.textContent = txt; });
+}
+if (timer) tickOn();
+function timerPanelHTML(s, k, isToday) {
+  const mine = !!timer && timer.id === s.id, other = timer && !mine ? songById(timer.id) : null, run = mine && !!timer.start;
+  const m = dayMins(s, k);
+  let ctl = "";
+  if (isToday && other) ctl = `<p class="muted" style="margin:0;font-size:13.5px">${esc(other.title)} 타이머가 켜져 있어요.</p><button class="btn small" data-act="open-song" data-id="${other.id}">그 숙제로 가기</button>`;
+  else if (isToday && !mine) ctl = `<button class="btn big tm-go" data-act="tm-start" data-id="${s.id}">${ICON.play}타이머 시작</button>`;
+  else if (isToday) ctl = `<div class="row">${run ? `<button class="btn" data-act="tm-pause">일시정지</button>` : `<button class="btn" data-act="tm-start" data-id="${s.id}">계속하기</button>`}
+      <button class="btn primary" data-act="tm-finish" style="background:var(--c);border-color:var(--c);color:#fff">끝내고 기록</button>
+      <button class="btn small danger ${S.tmArm ? "armed" : ""}" data-act="tm-reset">${S.tmArm ? "정말 지울까요?" : "지우기"}</button></div>`;
+  return `<div class="panel tm ${run ? "run" : ""}">
+    <div class="section-head"><h3 style="font-size:18px">연습 타이머</h3><span class="count">${isToday ? "오늘" : fmtShort(parseYmd(k))} 연습 시간 <b>${fmtMin(m)}</b></span></div>
+    ${isToday && mine ? `<div class="tm-clock" role="timer" aria-label="연습 시간">${clock(timerMs())}</div><p class="muted tm-state">${run ? "연습 중… 화면을 꺼도 계속 재요" : "잠깐 멈췄어요"}</p>` : ""}
+    ${ctl ? `<div class="tm-ctl">${ctl}</div>` : ""}
+    <form class="tm-manual" data-form="mins" data-id="${s.id}" data-day="${k}">
+      <label class="field"><span>${isToday ? "타이머 없이 했다면 " : ""}${isToday ? "오늘" : "이 날"} 연습 시간 직접 적기</span>
+        <span class="row" style="flex-wrap:nowrap"><input class="input tabnum" id="mins-${s.id}-${k}" data-keep name="mins" type="number" inputmode="numeric" min="0" max="600" value="${m}" style="width:96px"><span class="muted">분</span><button class="btn small" type="submit">저장</button></span></label>
+    </form>
+  </div>`;
+}
+function timerbarHTML(guest) {
+  if (!timer) return "";
+  const s = songById(timer.id);
+  if (!s) { if (S.loaded.songs && S.backend) { timer = null; saveTimer(); } return ""; }
+  if (guest || (S.modal && S.modal.type === "song" && S.modal.id === s.id)) return "";
+  const c = CH[s.char] || CHARS[0];
+  return `<button class="timerbar ${timer.start ? "" : "paused"}" style="--c:${c.color}" data-act="open-song" data-id="${s.id}" aria-label="${esc(s.title)} 연습 타이머 열기">${stampHTML(s.char, "flat")}<span class="t">${esc(s.title)}</span><span class="tm-clock">${clock(timerMs())}</span>${timer.start ? "" : "<span>멈춤</span>"}</button>`;
+}
+
 /* 잘못 누른 색칠 되돌리기 */
 function unstamp(id, t) {
   const s = songById(id); if (!s) return;
@@ -2174,7 +2415,7 @@ function ics(l) {
 }
 
 const ACT = {
-  tab: t => { S.tab = t.dataset.tab; render(); window.scrollTo(0, 0); },
+  tab: t => { S.shareArm = null; S.tab = t.dataset.tab; render(); window.scrollTo(0, 0); },
   "open-song": t => openModal({ type: "song", id: t.dataset.id }),
   stamp: t => stamp(t.dataset.id),
   close: closeModal,
@@ -2271,13 +2512,15 @@ const ACT = {
   theme: t => { saveSettings({ theme: t.dataset.v }); render(); },
   // 선생님께 공유
   "share-on": () => { enableShare(); toast("공유 링크를 만들었어요. 선생님께 보내주세요."); },
-  "share-off": t => {
-    if (!t.classList.contains("armed")) { t.classList.add("armed"); t.textContent = "정말 끌까요?"; return; }
-    disableShare();
+  // 한 번 더 눌러야 실행돼요. 확인 상태는 S에 둬서 화면이 다시 그려져도 유지돼요.
+  "share-off": () => {
+    if (S.shareArm !== "off") { S.shareArm = "off"; render(); return; }
+    S.shareArm = null; disableShare();
   },
-  "share-regen": async t => {
-    if (!t.classList.contains("armed")) { t.classList.add("armed", "danger"); t.textContent = "예전 링크는 안 열려요. 바꿀까요?"; return; }
-    await disableShare(true); enableShare();
+  "share-regen": async () => {
+    if (S.shareArm !== "regen") { S.shareArm = "regen"; render(); return; }
+    S.shareArm = null;
+    await disableShare(true); await enableShare();
     toast("새 링크를 만들었어요. 선생님께 새 링크를 다시 보내주세요.");
   },
   "copy-link": async () => { const u = shareURL(); if (u) toast(await copyText(u) ? "링크를 복사했어요. 카톡이나 인스타 DM에 붙여넣어 주세요." : "복사하지 못했어요."); },
@@ -2292,6 +2535,22 @@ const ACT = {
     if (!FB) return;
     try { await FB.api.deleteDoc(FB.api.doc(FB.fs, "reports", t.dataset.token, "notes", t.dataset.id)); toast("한마디를 지웠어요."); }
     catch (e) { toast("지우지 못했어요."); }
+  },
+  "tm-start": t => timerStart(t.dataset.id),
+  "tm-pause": () => timerPause(),
+  "tm-finish": () => timerFinish(),
+  "tm-reset": () => { if (!S.tmArm) { S.tmArm = true; render(); return; } timerReset(); },
+  "lesson-seen": t => { try { localStorage.setItem("lesson-seen-" + S.user.uid, t.dataset.sig); } catch (e) {} render(); },
+  // 같이 보는 레슨 일정 (선생님 쪽)
+  "sl-new": t => { S.lessonEdit = { tok: t.dataset.token, id: null }; S.lessonArm = null; render(); },
+  "sl-edit": t => { S.lessonEdit = { tok: t.dataset.token, id: t.dataset.id }; S.lessonArm = null; render(); },
+  "sl-cancel": () => { S.lessonEdit = null; render(); },
+  "sl-del": async t => {
+    const id = t.dataset.id;
+    if (S.lessonArm !== id) { S.lessonArm = id; render(); return; }
+    S.lessonArm = null; render();
+    try { await FB.api.deleteDoc(FB.api.doc(sharedLessons(t.dataset.token), id)); toast("레슨을 지웠어요. 학생 달력에서도 지워져요."); }
+    catch (e) { toast("지우지 못했어요. 인터넷 연결을 확인해 주세요."); }
   },
   // 선생님 모드
   "teacher-toggle": () => {
@@ -2365,6 +2624,32 @@ document.addEventListener("submit", async e => {
       toast("한마디를 남겼어요. 학생 앱에 바로 보여요.");
     } catch (err) {
       toast(err && err.code === "permission-denied" ? "남기지 못했어요. 학생이 공유를 껐을 수 있어요." : "남기지 못했어요. 인터넷 연결을 확인해 주세요.");
+    }
+    return;
+  }
+  if (f.dataset.form === "mins") {
+    const song = songById(f.dataset.id), k = f.dataset.day;
+    if (!song || !k) return;
+    const v = Math.max(0, Math.min(600, parseInt(fd.get("mins"), 10) || 0)), mins = { ...(song.mins || {}) };
+    if (v) mins[k] = v; else delete mins[k];
+    saveSong({ ...song, mins });
+    toast(`${k === todayK() ? "오늘" : fmtShort(parseYmd(k))} 연습 시간을 ${fmtMin(v)}으로 적었어요.`); render();
+    return;
+  }
+  if (f.dataset.form === "share-lesson") {
+    const tok = f.dataset.token, id = f.dataset.id || uid(), date = String(fd.get("date") || ""), time = String(fd.get("time") || "19:00");
+    if (!date || !FB || !tok) return;
+    const list = (tok === S.reportToken ? S.reportLessons : S.modalLessons) || [];
+    if (list.some(x => x.id !== id && x.at.slice(0, 10) === date)) { toast("그 날에는 이미 레슨이 있어요. 기존 레슨을 수정해 주세요."); return; }
+    let by = (document.getElementById("note-name") || {}).value || "";
+    if (!by) { try { by = localStorage.getItem("teacher-name") || ""; } catch (e) {} }
+    if (!by && S.user && S.member) by = nick();
+    by = by.trim() || "선생님";
+    try {
+      await FB.api.setDoc(FB.api.doc(sharedLessons(tok), id), lessonBody({ at: `${date}T${time}`, memo: String(fd.get("memo") || "").trim() }, by));
+      S.lessonEdit = null; toast("레슨 일정을 저장했어요. 학생 앱 달력에도 바로 보여요."); render();
+    } catch (err) {
+      toast(err && err.code === "permission-denied" ? "저장하지 못했어요. 학생이 공유를 껐을 수 있어요." : "저장하지 못했어요. 인터넷 연결을 확인해 주세요.");
     }
     return;
   }
